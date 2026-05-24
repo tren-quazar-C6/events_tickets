@@ -1,0 +1,79 @@
+### Test Environment
+@baseUrl = http://localhost:8080
+@correlationId = demo-trace-001
+
+### Health Check
+GET {{baseUrl}}/health
+
+###
+### Sales Audit - New Sale
+POST {{baseUrl}}/api/audit/sales
+Content-Type: application/json
+X-Correlation-ID: {{correlationId}}
+
+{
+  "employeeId": "emp-001",
+  "employeeName": "Developer 4",
+  "ticketId": "ticket-001",
+  "eventId": "event-001",
+  "amount": 45000,
+  "paymentMethod": "cash"
+}
+
+###
+### Ticket Print - First Print
+POST {{baseUrl}}/api/audit/tickets/prints
+Content-Type: application/json
+X-Correlation-ID: {{correlationId}}
+
+{
+  "employeeId": "emp-001",
+  "ticketId": "ticket-001",
+  "printerName": "HP-LaserJet-001",
+  "reason": "Customer requested physical copy"
+}
+
+###
+### Ticket Reprint - Duplicate Copy
+POST {{baseUrl}}/api/audit/tickets/reprints
+Content-Type: application/json
+X-Correlation-ID: {{correlationId}}
+
+{
+  "employeeId": "emp-001",
+  "ticketId": "ticket-001",
+  "printerName": "HP-LaserJet-001",
+  "reason": "Customer lost original, reissuing"
+}
+
+###
+### Ticket Cancellation
+POST {{baseUrl}}/api/audit/tickets/cancellations
+Content-Type: application/json
+X-Correlation-ID: demo-trace-002
+
+{
+  "employeeId": "emp-001",
+  "ticketId": "ticket-001",
+  "reason": "Customer refund request"
+}
+
+###
+### Get Ticket History
+GET {{baseUrl}}/api/audit/tickets/ticket-001
+X-Correlation-ID: demo-trace-003
+
+###
+### Another Sale (Different Employee)
+POST {{baseUrl}}/api/audit/sales
+Content-Type: application/json
+X-Correlation-ID: demo-trace-004
+
+{
+  "employeeId": "emp-002",
+  "employeeName": "Assistant Dev 4",
+  "ticketId": "ticket-002",
+  "eventId": "event-002",
+  "amount": 50000,
+  "paymentMethod": "credit_card"
+}
