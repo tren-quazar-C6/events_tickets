@@ -1,0 +1,38 @@
+services:
+  tickets:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: events_tickets
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    depends_on:
+      events_mongo:
+        condition: service_healthy
+    networks:
+      - events_network
+
+  events_mongo:
+    image: mongo:8
+    container_name: events_mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - events_mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - events_network
+
+networks:
+  events_network:
+    name: events_network
+
+volumes:
+  events_mongo_data:

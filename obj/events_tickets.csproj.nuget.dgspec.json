@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\User\\Documents\\quasar\\events_tickets\\events_tickets.csproj": {}
+    "/Users/veronicamartinez/Documents/RIWI/C Sharp/events_quasar/events_tickets/events_tickets.csproj": {}
   },
   "projects": {
-    "C:\\Users\\User\\Documents\\quasar\\events_tickets\\events_tickets.csproj": {
+    "/Users/veronicamartinez/Documents/RIWI/C Sharp/events_quasar/events_tickets/events_tickets.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\User\\Documents\\quasar\\events_tickets\\events_tickets.csproj",
+        "projectUniqueName": "/Users/veronicamartinez/Documents/RIWI/C Sharp/events_quasar/events_tickets/events_tickets.csproj",
         "projectName": "events_tickets",
-        "projectPath": "C:\\Users\\User\\Documents\\quasar\\events_tickets\\events_tickets.csproj",
-        "packagesPath": "C:\\Users\\User\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\User\\Documents\\quasar\\events_tickets\\obj\\",
+        "projectPath": "/Users/veronicamartinez/Documents/RIWI/C Sharp/events_quasar/events_tickets/events_tickets.csproj",
+        "packagesPath": "/Users/veronicamartinez/.nuget/packages/",
+        "outputPath": "/Users/veronicamartinez/Documents/RIWI/C Sharp/events_quasar/events_tickets/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\User\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "/Users/veronicamartinez/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
@@ -43,6 +43,16 @@
       "frameworks": {
         "net10.0": {
           "targetAlias": "net10.0",
+          "dependencies": {
+            "MongoDB.Driver": {
+              "target": "Package",
+              "version": "[3.8.1, )"
+            },
+            "SharpCompress": {
+              "target": "Package",
+              "version": "[0.48.1, )"
+            }
+          },
           "imports": [
             "net461",
             "net462",
@@ -62,7 +72,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.201/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/10.0.201/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.AspNetCore": "(,10.0.32767]",
             "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",
