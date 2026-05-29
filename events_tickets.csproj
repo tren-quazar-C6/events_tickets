@@ -8,11 +8,12 @@
 
   <ItemGroup>
     <PackageReference Include="MongoDB.Driver" Version="3.8.1" />
+    <PackageReference Include="MySqlConnector" Version="2.4.0" />
     <PackageReference Include="SharpCompress" Version="0.48.1" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="scripts\" />
+    <PackageReference Include="Dapper" Version="2.1.66" />
+    <PackageReference Include="Npgsql" Version="9.0.3" />
+    <PackageReference Include="QRCoder" Version="1.6.0" />
+    <PackageReference Include="QuestPDF" Version="2025.1.0" />
   </ItemGroup>
 
 </Project>

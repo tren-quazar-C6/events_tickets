@@ -14,12 +14,27 @@ services:
     networks:
       - events_network
 
+  print-server:
+    build:
+      context: ./print-server
+      dockerfile: Dockerfile
+    container_name: events_print_server
+    ports:
+      - "9100:9100"
+    devices:
+      - /dev/usb/lp0:/dev/usb/lp0   # adjust to your USB printer device
+    networks:
+      - events_network
+    restart: unless-stopped
+
   events_mongo:
     image: mongo:8
     container_name: events_mongo
     restart: unless-stopped
     ports:
       - "27017:27017"
+    env_file:
+      - .env
     volumes:
       - events_mongo_data:/data/db
     healthcheck:
