@@ -19,6 +19,12 @@ public class VentaService : IVentaService
 
     public async Task<VentaDetalleDto> CrearAsync(CrearVentaRequest req)
     {
+        if (req.IdEventoAsientos.Count == 0)
+            throw new InvalidOperationException("Debe seleccionar al menos un asiento");
+
+        if (req.IdEventoAsientos.Count != req.IdEventoAsientos.Distinct().Count())
+            throw new InvalidOperationException("La venta contiene asientos duplicados");
+
         using var conn = _db.Create();
         conn.Open();
         using var tx = conn.BeginTransaction();
@@ -31,9 +37,10 @@ public class VentaService : IVentaService
             JOIN evento_zonas ez ON ez.id_evento_zona = ea.id_evento_zona
             JOIN zonas z ON z.id_zona = ez.id_zona
             WHERE ea.id_evento_asiento IN @ids
+              AND ez.id_evento = @idEvento
               AND ea.estado = 'disponible'
             FOR UPDATE
-            """, new { ids = req.IdEventoAsientos }, tx)).ToList();
+            """, new { ids = req.IdEventoAsientos, idEvento = req.IdEvento }, tx)).ToList();
 
         if (asientos.Count != req.IdEventoAsientos.Count)
             throw new InvalidOperationException("Uno o más asientos no están disponibles");
@@ -65,8 +72,6 @@ public class VentaService : IVentaService
             "UPDATE evento_asientos SET estado = 'vendido' WHERE id_evento_asiento IN @ids",
             new { ids = req.IdEventoAsientos }, tx);
 
-        tx.Commit();
-
         var asientoInfos = asientos.Select(a => new AsientoInfo(
             (int)a.id_evento_asiento,
             (string)a.codigo_asiento,
@@ -74,7 +79,9 @@ public class VentaService : IVentaService
             (decimal)a.precio
         )).ToList();
 
-        var tickets = await _tickets.GenerarAsync(venta, asientoInfos);
+        var tickets = await _tickets.GenerarAsync(venta, asientoInfos, conn, tx);
+
+        tx.Commit();
 
         return new VentaDetalleDto
         {
@@ -118,13 +125,25 @@ public class VentaService : IVentaService
     public async Task<List<VentaResumenDto>> ObtenerPorClienteAsync(int idCliente)
     {
         using var conn = _db.Create();
-        var rows = await conn.QueryAsync<Venta>(
-            "SELECT * FROM ventas WHERE id_cliente = @idCliente ORDER BY fecha_venta DESC",
+        var rows = await conn.QueryAsync("""
+            SELECT v.*, COUNT(t.id_ticket) AS cantidad_tickets
+            FROM ventas v
+            LEFT JOIN tickets t ON t.id_venta = v.id_venta
+            WHERE v.id_cliente = @idCliente
+            GROUP BY v.id_venta
+            ORDER BY v.fecha_venta DESC
+            """,
             new { idCliente });
         return rows.Select(v => new VentaResumenDto
         {
-            IdVenta = v.IdVenta, IdEvento = v.IdEvento, IdCliente = v.IdCliente,
-            IdStaff = v.IdStaff, Total = v.Total, Estado = v.Estado, FechaVenta = v.FechaVenta
+            IdVenta = v.id_venta,
+            IdEvento = v.id_evento,
+            IdCliente = v.id_cliente,
+            IdStaff = v.id_staff,
+            Total = v.total,
+            Estado = v.estado,
+            FechaVenta = v.fecha_venta,
+            CantidadTickets = (int)v.cantidad_tickets
         }).ToList();
     }
 

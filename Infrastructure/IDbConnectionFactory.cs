@@ -1,4 +1,5 @@
 using System.Data;
+using MySqlConnector;
 using Npgsql;
 
 namespace events_tickets.Infrastructure;
@@ -16,4 +17,14 @@ public class PostgresConnectionFactory : IDbConnectionFactory
         _connectionString = connectionString;
 
     public IDbConnection Create() => new NpgsqlConnection(_connectionString);
+}
+
+public class MySqlConnectionFactory : IDbConnectionFactory
+{
+    private readonly string _connectionString;
+
+    public MySqlConnectionFactory(string connectionString) =>
+        _connectionString = connectionString;
+
+    public IDbConnection Create() => new MySqlConnection(_connectionString);
 }

@@ -1,9 +1,12 @@
 using events_tickets.Configuration;
 using events_tickets.Infrastructure;
 using events_tickets.Services;
+using Dapper;
 using MongoDB.Driver;
 
 var builder = WebApplication.CreateBuilder(args);
+
+DefaultTypeMap.MatchNamesWithUnderscores = true;
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddEndpointsApiExplorer();

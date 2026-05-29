@@ -1,12 +1,11 @@
-using events_tickets.Contracts;
-using events_tickets.Dtos;
+namespace events_tickets.Dtos;
 
-namespace events_tickets.Services;
-
-public interface IClienteService
+public class ClienteDto
 {
-    Task<ClienteDto> CrearAsync(CrearClienteRequest req);
-    Task<ClienteDto?> ObtenerAsync(int id);
-    Task<ClienteDto?> ObtenerPorDocumentoAsync(string numeroDocumento);
-    Task<List<ClienteDto>> ListarAsync();
+    public int IdCliente { get; set; }
+    public string Nombre { get; set; } = "";
+    public string NumeroDocumento { get; set; } = "";
+    public string? Email { get; set; }
+    public string? Telefono { get; set; }
+    public DateTime FechaRegistro { get; set; }
 }

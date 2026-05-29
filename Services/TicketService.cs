@@ -1,4 +1,5 @@
 using Dapper;
+using System.Data;
 using events_tickets.Dtos;
 using events_tickets.Infrastructure;
 using events_tickets.Models;
@@ -37,6 +38,36 @@ public class TicketService : ITicketService
         }).ToList();
 
         using var conn = _db.Create();
+        conn.Open();
+        return await InsertarAsync(tickets, conn, null);
+    }
+
+    public async Task<List<Ticket>> GenerarAsync(Venta venta, List<AsientoInfo> asientos, IDbConnection conn, IDbTransaction tx)
+    {
+        var tickets = asientos.Select(a =>
+        {
+            var qrToken = Guid.NewGuid().ToString("N");
+            var codigo = $"TKT-{venta.IdEvento}-{a.IdEventoAsiento}-{qrToken[..8].ToUpper()}";
+            return new Ticket
+            {
+                IdVenta = venta.IdVenta,
+                IdEvento = venta.IdEvento,
+                IdCliente = venta.IdCliente,
+                IdEventoAsiento = a.IdEventoAsiento,
+                CodigoAsiento = a.CodigoAsiento,
+                Zona = a.Zona,
+                CodigoUnico = codigo,
+                QrToken = qrToken,
+                QrImagenBase64 = GenerarQr(qrToken),
+                PrecioPagado = a.Precio
+            };
+        }).ToList();
+
+        return await InsertarAsync(tickets, conn, tx);
+    }
+
+    private static async Task<List<Ticket>> InsertarAsync(List<Ticket> tickets, IDbConnection conn, IDbTransaction? tx)
+    {
         foreach (var t in tickets)
         {
             await conn.ExecuteAsync("""
@@ -46,8 +77,8 @@ public class TicketService : ITicketService
                                     VALUES
                                       (@IdVenta, @IdEvento, @IdCliente, @IdEventoAsiento, @CodigoAsiento,
                                        @Zona, @CodigoUnico, @QrToken, @QrImagenBase64, @PrecioPagado)
-                                    """, t);
-            t.IdTicket = await conn.ExecuteScalarAsync<int>("SELECT LAST_INSERT_ID()");
+                                    """, t, tx);
+            t.IdTicket = await conn.ExecuteScalarAsync<int>("SELECT LAST_INSERT_ID()", transaction: tx);
         }
 
         return tickets;
@@ -56,27 +87,28 @@ public class TicketService : ITicketService
     {
         using var conn = _db.Create();
         var sql = """
-            SELECT t.*, c.nombre as nombre_cliente
+            SELECT t.*, c.nombre as nombre_cliente, e.nombre_evento, e.fecha_evento
             FROM tickets t
             JOIN clientes c ON c.id_cliente = t.id_cliente
+            LEFT JOIN eventos e ON e.id_evento = t.id_evento
             WHERE t.id_ticket = @id
             """;
         var t = await conn.QueryFirstOrDefaultAsync(sql, new { id });
-        if (t == null) return null;
-        return new TicketDetalleDto
-        {
-            IdTicket = t.id_ticket,
-            CodigoUnico = t.codigo_unico,
-            QrToken = t.qr_token,
-            CodigoAsiento = t.codigo_asiento,
-            Zona = t.zona,
-            PrecioPagado = t.precio_pagado,
-            EstadoTicket = t.estado_ticket,
-            FechaEmision = t.fecha_emision,
-            IdEvento = t.id_evento,
-            IdCliente = t.id_cliente,
-            NombreCliente = t.nombre_cliente
-        };
+        return t == null ? null : ToDetalle(t);
+    }
+
+    public async Task<TicketDetalleDto?> ObtenerPorCodigoAsync(string codigoOQrToken)
+    {
+        using var conn = _db.Create();
+        var sql = """
+            SELECT t.*, c.nombre as nombre_cliente, e.nombre_evento, e.fecha_evento
+            FROM tickets t
+            JOIN clientes c ON c.id_cliente = t.id_cliente
+            LEFT JOIN eventos e ON e.id_evento = t.id_evento
+            WHERE t.codigo_unico = @codigoOQrToken OR t.qr_token = @codigoOQrToken
+            """;
+        var t = await conn.QueryFirstOrDefaultAsync(sql, new { codigoOQrToken });
+        return t == null ? null : ToDetalle(t);
     }
 
     public async Task<List<TicketResumenDto>> ObtenerPorVentaAsync(int idVenta)
@@ -94,6 +126,37 @@ public class TicketService : ITicketService
             "SELECT * FROM tickets WHERE id_cliente = @idCliente ORDER BY fecha_emision DESC",
             new { idCliente });
         return rows.Select(ToResumen).ToList();
+    }
+
+    public async Task<TicketDetalleDto?> ValidarAsync(string codigoOQrToken, int idStaff)
+    {
+        using var conn = _db.Create();
+        conn.Open();
+        using var tx = conn.BeginTransaction();
+
+        var ticket = await conn.QueryFirstOrDefaultAsync("""
+            SELECT * FROM tickets
+            WHERE (codigo_unico = @codigoOQrToken OR qr_token = @codigoOQrToken)
+              AND estado_ticket = 'activo'
+            FOR UPDATE
+            """, new { codigoOQrToken }, tx);
+
+        if (ticket == null)
+        {
+            tx.Rollback();
+            return null;
+        }
+
+        await conn.ExecuteAsync("""
+            UPDATE tickets
+            SET estado_ticket = 'usado',
+                fecha_validacion = NOW(),
+                id_staff_validacion = @idStaff
+            WHERE id_ticket = @idTicket
+            """, new { idStaff, idTicket = (int)ticket.id_ticket }, tx);
+
+        tx.Commit();
+        return await ObtenerAsync((int)ticket.id_ticket);
     }
 
     public async Task<byte[]> GenerarPdfAsync(int idTicket)
@@ -149,5 +212,22 @@ public class TicketService : ITicketService
         PrecioPagado = r.precio_pagado,
         EstadoTicket = r.estado_ticket,
         FechaEmision = r.fecha_emision
+    };
+
+    private static TicketDetalleDto ToDetalle(dynamic t) => new()
+    {
+        IdTicket = t.id_ticket,
+        CodigoUnico = t.codigo_unico,
+        QrToken = t.qr_token,
+        CodigoAsiento = t.codigo_asiento,
+        Zona = t.zona,
+        PrecioPagado = t.precio_pagado,
+        EstadoTicket = t.estado_ticket,
+        FechaEmision = t.fecha_emision,
+        IdEvento = t.id_evento,
+        NombreEvento = t.nombre_evento,
+        FechaEvento = t.fecha_evento,
+        IdCliente = t.id_cliente,
+        NombreCliente = t.nombre_cliente
     };
 }

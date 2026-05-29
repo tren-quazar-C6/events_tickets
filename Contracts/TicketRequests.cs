@@ -1,3 +1,3 @@
 namespace events_tickets.Contracts;
 
-public record ValidateTicketRequest(string TicketCode, string EmployeeId);
+public record ValidarTicketRequest(string CodigoOQrToken, int IdStaff);

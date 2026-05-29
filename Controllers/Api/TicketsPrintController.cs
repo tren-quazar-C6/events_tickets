@@ -1,4 +1,5 @@
 using Dapper;
+using events_tickets.Contracts;
 using events_tickets.Infrastructure;
 using events_tickets.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -18,6 +19,37 @@ public class TicketsPrintController : ControllerBase
         _tickets = tickets;
         _print = print;
         _db = db;
+    }
+
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> Obtener(int id)
+    {
+        var ticket = await _tickets.ObtenerAsync(id);
+        return ticket == null
+            ? NotFound(ServiceResponse<object>.Fail("Ticket no encontrado"))
+            : Ok(ServiceResponse<object>.Ok(ticket));
+    }
+
+    [HttpGet("codigo/{codigo}")]
+    public async Task<IActionResult> PorCodigo(string codigo)
+    {
+        var ticket = await _tickets.ObtenerPorCodigoAsync(codigo);
+        return ticket == null
+            ? NotFound(ServiceResponse<object>.Fail("Ticket no encontrado"))
+            : Ok(ServiceResponse<object>.Ok(ticket));
+    }
+
+    [HttpGet("venta/{idVenta:int}")]
+    public async Task<IActionResult> PorVenta(int idVenta) =>
+        Ok(ServiceResponse<object>.Ok(await _tickets.ObtenerPorVentaAsync(idVenta)));
+
+    [HttpPost("validar")]
+    public async Task<IActionResult> Validar([FromBody] ValidarTicketRequest req)
+    {
+        var ticket = await _tickets.ValidarAsync(req.CodigoOQrToken, req.IdStaff);
+        return ticket == null
+            ? Conflict(ServiceResponse<object>.Fail("Ticket no encontrado, cancelado o ya utilizado"))
+            : Ok(ServiceResponse<object>.Ok(ticket));
     }
 
     [HttpGet("{id:int}/qr")]

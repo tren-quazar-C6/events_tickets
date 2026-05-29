@@ -1,8 +1,11 @@
 namespace events_tickets.Contracts;
 
-public record CrearClienteRequest(
-    string Nombre,
-    string NumeroDocumento,
-    string? Email = null,
-    string? Telefono = null
+public record CrearVentaRequest(
+    int IdEvento,
+    int IdCliente,
+    int IdStaff,
+    List<int> IdEventoAsientos,
+    string? Notas = null
 );
+
+public record CancelarVentaRequest(string Motivo);

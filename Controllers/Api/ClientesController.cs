@@ -1,4 +1,5 @@
 using events_tickets.Contracts;
+using events_tickets.Infrastructure;
 using events_tickets.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,31 +19,37 @@ public class ClientesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll() => Ok(await _clientes.GetAllAsync());
+    public async Task<IActionResult> Listar() =>
+        Ok(ServiceResponse<object>.Ok(await _clientes.ListarAsync()));
 
-    [HttpGet("{id}")]
-    public async Task<IActionResult> Get(string id)
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> Obtener(int id)
     {
-        var c = await _clientes.GetAsync(id);
-        return c == null ? NotFound() : Ok(c);
+        var c = await _clientes.ObtenerAsync(id);
+        return c == null
+            ? NotFound(ServiceResponse<object>.Fail("Cliente no encontrado"))
+            : Ok(ServiceResponse<object>.Ok(c));
     }
 
-    [HttpGet("document/{doc}")]
-    public async Task<IActionResult> GetByDocument(string doc)
+    [HttpGet("documento/{doc}")]
+    public async Task<IActionResult> PorDocumento(string doc)
     {
-        var c = await _clientes.GetByDocumentAsync(doc);
-        return c == null ? NotFound() : Ok(c);
+        var c = await _clientes.ObtenerPorDocumentoAsync(doc);
+        return c == null
+            ? NotFound(ServiceResponse<object>.Fail("Cliente no encontrado"))
+            : Ok(ServiceResponse<object>.Ok(c));
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateCustomerRequest req)
+    public async Task<IActionResult> Crear([FromBody] CrearClienteRequest req)
     {
-        var c = await _clientes.CreateAsync(req);
-        return CreatedAtAction(nameof(Get), new { id = c.Id }, c);
+        var c = await _clientes.CrearAsync(req);
+        return CreatedAtAction(nameof(Obtener), new { id = c.IdCliente },
+            ServiceResponse<object>.Ok(c));
     }
 
     // Portal público: historial de tickets del cliente
-    [HttpGet("{id}/tickets")]
-    public async Task<IActionResult> GetTickets(string id) =>
-        Ok(await _tickets.GetByCustomerAsync(id));
+    [HttpGet("{id:int}/tickets")]
+    public async Task<IActionResult> MisTickets(int id) =>
+        Ok(ServiceResponse<object>.Ok(await _tickets.ObtenerPorClienteAsync(id)));
 }

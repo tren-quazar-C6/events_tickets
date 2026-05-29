@@ -1,8 +1,8 @@
 namespace events_tickets.Contracts;
 
-public record CreateCustomerRequest(
-    string FullName,
-    string DocumentNumber,
-    string Email,
-    string Phone
+public record CrearClienteRequest(
+    string Nombre,
+    string NumeroDocumento,
+    string? Email = null,
+    string? Telefono = null
 );

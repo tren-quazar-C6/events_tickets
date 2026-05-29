@@ -1,53 +1,41 @@
-using events_tickets.Contracts;
-using events_tickets.Infrastructure;
-using events_tickets.Services;
-using Microsoft.AspNetCore.Mvc;
+using System.Net.Http.Json;
+using events_tickets.Configuration;
+using events_tickets.Models;
+using Microsoft.Extensions.Options;
 
-namespace events_tickets.Controllers.Api;
+namespace events_tickets.Services;
 
-[ApiController]
-[Route("api/clientes")]
-public class ClientesController : ControllerBase
+public class PrintService : IPrintService
 {
-    private readonly IClienteService _clientes;
-    private readonly ITicketService _tickets;
+    private readonly HttpClient _http;
+    private readonly PrintServerOptions _options;
 
-    public ClientesController(IClienteService clientes, ITicketService tickets)
+    public PrintService(HttpClient http, IOptions<PrintServerOptions> options)
     {
-        _clientes = clientes;
-        _tickets = tickets;
+        _http = http;
+        _options = options.Value;
     }
 
-    [HttpGet]
-    public async Task<IActionResult> Listar() =>
-        Ok(ServiceResponse<object>.Ok(await _clientes.ListarAsync()));
-
-    [HttpGet("{id:int}")]
-    public async Task<IActionResult> Obtener(int id)
+    public async Task<bool> ImprimirAsync(
+        Ticket ticket,
+        string nombreEvento,
+        DateTime fechaEvento,
+        string nombreCliente,
+        string numeroDocumento)
     {
-        var c = await _clientes.ObtenerAsync(id);
-        if (c == null) return NotFound(ServiceResponse<object>.Fail("Cliente no encontrado"));
-        return Ok(ServiceResponse<object>.Ok(c));
-    }
+        var payload = new
+        {
+            eventName = nombreEvento,
+            eventDate = fechaEvento.ToString("yyyy-MM-dd HH:mm"),
+            customerName = nombreCliente,
+            documentNumber = numeroDocumento,
+            section = ticket.Zona,
+            seatNumber = ticket.CodigoAsiento,
+            ticketCode = ticket.CodigoUnico
+        };
 
-    [HttpGet("documento/{doc}")]
-    public async Task<IActionResult> PorDocumento(string doc)
-    {
-        var c = await _clientes.ObtenerPorDocumentoAsync(doc);
-        if (c == null) return NotFound(ServiceResponse<object>.Fail("Cliente no encontrado"));
-        return Ok(ServiceResponse<object>.Ok(c));
+        var url = new Uri(new Uri(_options.BaseUrl.TrimEnd('/') + "/"), "print/ticket");
+        var response = await _http.PostAsJsonAsync(url, payload);
+        return response.IsSuccessStatusCode;
     }
-
-    [HttpPost]
-    public async Task<IActionResult> Crear([FromBody] CrearClienteRequest req)
-    {
-        var c = await _clientes.CrearAsync(req);
-        return CreatedAtAction(nameof(Obtener), new { id = c.IdCliente },
-            ServiceResponse<object>.Ok(c));
-    }
-
-    // Portal público — tickets del cliente
-    [HttpGet("{id:int}/tickets")]
-    public async Task<IActionResult> MisTickets(int id) =>
-        Ok(ServiceResponse<object>.Ok(await _tickets.ObtenerPorClienteAsync(id)));
 }
