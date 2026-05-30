@@ -1,0 +1,93 @@
+@model List<events_tickets.Models.EventoResumen>
+@{
+    ViewData["Title"] = "Events";
+    var employee = ViewBag.Employee as events_tickets.Models.Employee;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Available Events</h2>
+    @if (employee != null)
+    {
+        <span class="text-muted">Welcome, <strong>@employee.Nombre</strong>
+            <span class="badge bg-secondary ms-1">@employee.Rol</span>
+        </span>
+    }
+</div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">No events available at the moment.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Event</th>
+                    <th>Type</th>
+                    <th>Date</th>
+                    <th>Price from</th>
+                    <th>Available</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var ev in Model)
+                {
+                    <tr>
+                        <td>
+                            <strong>@ev.NombreEvento</strong>
+                            @if (!string.IsNullOrEmpty(ev.Descripcion))
+                            {
+                                <br /><small class="text-muted">@ev.Descripcion</small>
+                            }
+                        </td>
+                        <td><span class="badge bg-info text-dark">@ev.TipoEvento</span></td>
+                        <td>@ev.FechaEvento.ToString("MMM dd, yyyy HH:mm")</td>
+                        <td>
+                            @if (ev.PrecioDesde.HasValue)
+                            {
+                                <span>$@ev.PrecioDesde.Value.ToString("N2")</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </td>
+                        <td>
+                            @if (ev.AsientosDisponibles == 0)
+                            {
+                                <span class="badge bg-danger">Sold out</span>
+                            }
+                            else if (ev.AsientosDisponibles <= 10)
+                            {
+                                <span class="badge bg-warning text-dark">@ev.AsientosDisponibles left</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success">@ev.AsientosDisponibles</span>
+                            }
+                        </td>
+                        <td>
+                            @if (ev.AsientosDisponibles > 0)
+                            {
+                                var now = DateTime.UtcNow;
+                                if (now >= ev.FechaInicioVentas && now <= ev.FechaFinVentas)
+                                {
+                                    <a asp-controller="Sale" asp-action="Create"
+                                       asp-route-eventoId="@ev.IdEvento"
+                                       class="btn btn-sm btn-primary">Sell tickets</a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">Sales closed</span>
+                                }
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

@@ -2,9 +2,8 @@ namespace events_tickets.Models;
 
 public class Employee
 {
-    public string Id { get; set; } = "";
-    public string FullName { get; set; } = "";
-    public string DocumentNumber { get; set; } = "";
-    public string Position { get; set; } = "";
-    public bool IsActive { get; set; } = true;
+    public int IdStaff { get; set; }
+    public string Nombre { get; set; } = "";
+    public string Email { get; set; } = "";
+    public string Rol { get; set; } = "";
 }
