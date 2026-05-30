@@ -1,41 +1,42 @@
-using System.Net.Http.Json;
-using events_tickets.Configuration;
+using System.Text;
+using System.Text.Json;
 using events_tickets.Models;
-using Microsoft.Extensions.Options;
+using events_tickets.Responses;
 
 namespace events_tickets.Services;
 
-public class PrintService : IPrintService
+public class PrintService
 {
-    private readonly HttpClient _http;
-    private readonly PrintServerOptions _options;
+    private readonly IHttpClientFactory _factory;
 
-    public PrintService(HttpClient http, IOptions<PrintServerOptions> options)
+    public PrintService(IHttpClientFactory factory)
     {
-        _http = http;
-        _options = options.Value;
+        _factory = factory;
     }
 
-    public async Task<bool> ImprimirAsync(
-        Ticket ticket,
-        string nombreEvento,
-        DateTime fechaEvento,
-        string nombreCliente,
-        string numeroDocumento)
+    public async Task<ServiceResponse<bool>> PrintTicketAsync(Ticket ticket)
     {
-        var payload = new
+        try
         {
-            eventName = nombreEvento,
-            eventDate = fechaEvento.ToString("yyyy-MM-dd HH:mm"),
-            customerName = nombreCliente,
-            documentNumber = numeroDocumento,
-            section = ticket.Zona,
-            seatNumber = ticket.CodigoAsiento,
-            ticketCode = ticket.CodigoUnico
-        };
+            var client = _factory.CreateClient("print");
+            var body = JsonSerializer.Serialize(new
+            {
+                fullName = ticket.CustomerName,
+                documentNumber = ticket.CustomerName,
+                ticketCode = ticket.Code
+            });
+            var content = new StringContent(body, Encoding.UTF8, "application/json");
+            var response = await client.PostAsync("/print", content);
 
-        var url = new Uri(new Uri(_options.BaseUrl.TrimEnd('/') + "/"), "print/ticket");
-        var response = await _http.PostAsJsonAsync(url, payload);
-        return response.IsSuccessStatusCode;
+            if (!response.IsSuccessStatusCode)
+                return new ServiceResponse<bool> { Success = false, Message = "Printer not available" };
+
+            return new ServiceResponse<bool> { Success = true, Data = true };
+        }
+        catch
+        {
+            // Print failure is non-fatal; tickets are still valid
+            return new ServiceResponse<bool> { Success = false, Message = "Printer not available" };
+        }
     }
 }
