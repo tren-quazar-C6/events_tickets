@@ -267,7 +267,8 @@ public class TicketService : ITicketService
         Zona = r.zona,
         PrecioPagado = r.precio_pagado,
         EstadoTicket = r.estado_ticket,
-        FechaEmision = r.fecha_generacion
+        FechaEmision = r.fecha_generacion,
+        QrImagenBase64 = GenerarQr(r.qr_token)
     };
 
     private static TicketDetalleDto ToDetalle(dynamic t) => new()

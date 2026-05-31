@@ -16,17 +16,17 @@ public class EventService : IEventService
         using var conn = _db.Create();
         var rows = await conn.QueryAsync<EventoResumen>("""
             SELECT
-                e.id_evento,
-                e.nombre_evento,
-                e.descripcion,
-                e.fecha_evento,
-                e.fecha_inicio_ventas,
-                e.fecha_fin_ventas,
-                e.capacidad_total,
-                te.nombre_tipo AS tipo_evento,
-                NULL AS imagen_principal,
-                SUM(CASE WHEN ea.estado = 'DISPONIBLE' THEN 1 ELSE 0 END) AS asientos_disponibles,
-                MIN(ez.precio) AS precio_desde
+                e.id_evento AS IdEvento,
+                e.nombre_evento AS NombreEvento,
+                e.descripcion AS Descripcion,
+                e.fecha_evento AS FechaEvento,
+                e.fecha_inicio_ventas AS FechaInicioVentas,
+                e.fecha_fin_ventas AS FechaFinVentas,
+                e.capacidad_total AS CapacidadTotal,
+                te.nombre_tipo AS TipoEvento,
+                NULL AS ImagenPrincipal,
+                SUM(CASE WHEN ea.estado = 'DISPONIBLE' THEN 1 ELSE 0 END) AS AsientosDisponibles,
+                MIN(ez.precio) AS PrecioDesde
             FROM EVENTOS e
             LEFT JOIN TIPO_EVENTO te ON te.id_tipo_evento = e.id_tipo_evento
             LEFT JOIN EVENTO_ZONA ez ON ez.id_evento = e.id_evento
@@ -45,19 +45,19 @@ public class EventService : IEventService
         using var conn = _db.Create();
         var evento = await conn.QueryFirstOrDefaultAsync<EventoDetalle>("""
             SELECT
-                e.id_evento,
-                e.nombre_evento,
-                e.descripcion,
-                e.fecha_evento,
-                e.fecha_inicio_ventas,
-                e.fecha_fin_ventas,
-                e.capacidad_total,
-                te.nombre_tipo AS tipo_evento,
-                NULL AS imagen_principal,
-                SUM(CASE WHEN ea.estado = 'DISPONIBLE' THEN 1 ELSE 0 END) AS asientos_disponibles,
-                SUM(CASE WHEN ea.estado = 'RESERVADO' THEN 1 ELSE 0 END) AS asientos_reservados,
-                SUM(CASE WHEN ea.estado = 'VENDIDO' THEN 1 ELSE 0 END) AS asientos_vendidos,
-                MIN(ez.precio) AS precio_desde
+                e.id_evento AS IdEvento,
+                e.nombre_evento AS NombreEvento,
+                e.descripcion AS Descripcion,
+                e.fecha_evento AS FechaEvento,
+                e.fecha_inicio_ventas AS FechaInicioVentas,
+                e.fecha_fin_ventas AS FechaFinVentas,
+                e.capacidad_total AS CapacidadTotal,
+                te.nombre_tipo AS TipoEvento,
+                NULL AS ImagenPrincipal,
+                SUM(CASE WHEN ea.estado = 'DISPONIBLE' THEN 1 ELSE 0 END) AS AsientosDisponibles,
+                SUM(CASE WHEN ea.estado = 'RESERVADO' THEN 1 ELSE 0 END) AS AsientosReservados,
+                SUM(CASE WHEN ea.estado = 'VENDIDO' THEN 1 ELSE 0 END) AS AsientosVendidos,
+                MIN(ez.precio) AS PrecioDesde
             FROM EVENTOS e
             LEFT JOIN TIPO_EVENTO te ON te.id_tipo_evento = e.id_tipo_evento
             LEFT JOIN EVENTO_ZONA ez ON ez.id_evento = e.id_evento
@@ -91,16 +91,16 @@ public class EventService : IEventService
         using var conn = _db.Create();
         var rows = await conn.QueryAsync<EventoAsiento>("""
             SELECT
-                ea.id_evento_asiento,
-                a.id_asiento AS id_asiento,
-                CONCAT(a.fila, '-', a.numero) AS codigo_asiento,
-                a.fila,
-                a.numero,
-                z.id_zona AS id_zona,
-                z.nombre_zona AS zona,
-                z.color_hex AS color_zona,
-                ez.precio,
-                ea.estado
+                ea.id_evento_asiento AS IdEventoAsiento,
+                a.id_asiento AS IdAsiento,
+                CONCAT(a.fila, '-', a.numero) AS CodigoAsiento,
+                a.fila AS Fila,
+                a.numero AS Numero,
+                z.id_zona AS IdZona,
+                z.nombre_zona AS Zona,
+                z.color_hex AS ColorZona,
+                ez.precio AS Precio,
+                ea.estado AS Estado
             FROM EVENTO_ASIENTO ea
             JOIN ASIENTOS a ON a.id_asiento = ea.id_asiento
             JOIN EVENTO_ZONA ez ON ez.id_evento = ea.id_evento AND ez.id_zona = a.id_zona

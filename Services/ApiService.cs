@@ -179,4 +179,33 @@ public class ApiService
             return new ServiceResponse<Sale> { Success = false, Message = ex.Message };
         }
     }
+    
+    // POST /api/usuarios — creates public user account after sale
+// Endpoint pending implementation by API team
+    public async Task<ServiceResponse<bool>> CreateUsuarioAsync(CreateUserRequest request)
+    {
+        try
+        {
+            var client = CreateAuthorizedClient();
+            var body = JsonSerializer.Serialize(new
+            {
+                nombre   = request.Nombre,
+                email    = request.Email,
+                password = request.Password,
+                documento = request.Documento,
+                telefono = request.Telefono
+            });
+            var content = new StringContent(body, Encoding.UTF8, "application/json");
+            var response = await client.PostAsync("/api/usuarios", content);
+
+            if (!response.IsSuccessStatusCode)
+                return new ServiceResponse<bool> { Success = false, Message = "User creation pending API endpoint" };
+
+            return new ServiceResponse<bool> { Success = true, Data = true };
+        }
+        catch
+        {
+            return new ServiceResponse<bool> { Success = false, Message = "User creation unavailable" };
+        }
+    }
 }

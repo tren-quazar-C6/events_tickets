@@ -45,7 +45,13 @@ public class SmtpEmailService : IEmailService
 
         if (!string.IsNullOrWhiteSpace(_options.Username))
             client.Credentials = new NetworkCredential(_options.Username, _options.Password);
-
+    
+        Console.WriteLine($"Host: {_options.Host}");
+        Console.WriteLine($"Port: {_options.Port}");
+        Console.WriteLine($"User: {_options.Username}");
+        Console.WriteLine($"SSL: {_options.EnableSsl}");
+        Console.WriteLine($"Configured: {_options.IsConfigured}");
+        
         await client.SendMailAsync(message);
         return true;
     }

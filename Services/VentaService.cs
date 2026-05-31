@@ -36,6 +36,7 @@ public class VentaService : IVentaService
             JOIN ASIENTOS a ON a.id_asiento = ea.id_asiento
             JOIN EVENTO_ZONA ez ON ez.id_evento = ea.id_evento AND ez.id_zona = a.id_zona
             JOIN ZONAS z ON z.id_zona = a.id_zona
+            LEFT JOIN TICKETS t ON t.id_evento_asiento = ea.id_evento_asiento
             WHERE ea.id_evento_asiento IN @ids
               AND ea.id_evento = @idEvento
               AND ea.estado = 'DISPONIBLE'

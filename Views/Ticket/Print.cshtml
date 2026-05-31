@@ -1,58 +1,52 @@
 @model events_tickets.Dtos.VentaDetalleDto
 @{
     ViewData["Title"] = "Tickets";
+    ViewData["Section"] = "boxoffice";
 }
 
-<div class="no-print d-flex justify-content-between align-items-center mb-3">
-    <h4>Sale #@Model.IdVenta — @Model.NombreEvento</h4>
+<div class="page-header no-print">
     <div>
-        <a asp-controller="Dashboard" asp-action="Index" class="btn btn-outline-secondary me-2">← Dashboard</a>
-        <button onclick="window.print()" class="btn btn-primary">🖨 Print again</button>
+        <div class="page-title">Venta #@Model.IdVenta completada</div>
+        <div class="page-subtitle">@Model.Tickets.Count entrada(s) — @Model.NombreCliente</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-controller="Dashboard" asp-action="Index" class="btn btn-outline">← Dashboard</a>
+        <button onclick="window.print()" class="btn btn-accent">🖨 Reimprimir</button>
     </div>
 </div>
 
-<div class="no-print mb-3">
-    <div class="alert alert-success">
-        Sale completed. <strong>@Model.Tickets.Count ticket(s)</strong>
-        @if (!string.IsNullOrEmpty(Model.EmailCliente))
-        {
-            <span>
-                @(ViewBag.EmailSent == true ? "sent to" : "ready for")
-                <strong>@Model.EmailCliente</strong>.
-            </span>
-        }
-        Printing now...
-    </div>
+<div class="alert alert-success no-print">
+    Tickets enviados a <strong>@Model.EmailCliente</strong>. Se están imprimiendo ahora.
 </div>
 
 @foreach (var ticket in Model.Tickets)
 {
-    <div class="border rounded p-3 mb-3" style="page-break-inside: avoid;">
-        <div class="row align-items-center">
-            <div class="col-8">
-                <h5 class="mb-1">@Model.NombreEvento</h5>
-                <p class="mb-1 text-muted">@((Model.FechaEvento ?? Model.FechaVenta).ToString("dddd, MMM dd yyyy — HH:mm"))</p>
-                <hr class="my-2" />
-                <p class="mb-1"><strong>@Model.NombreCliente</strong></p>
-                @if (!string.IsNullOrEmpty(ticket.CodigoAsiento))
-                {
-                    <p class="mb-1">Seat: <strong>@ticket.Zona - @ticket.CodigoAsiento</strong></p>
-                }
-                <p class="mb-0 text-muted" style="font-size:0.8rem;">
-                    Code: <strong>@ticket.CodigoUnico</strong>
-                </p>
-            </div>
-            <div class="col-4 text-center">
-                <img src="/api/tickets/@ticket.IdTicket/qr"
-                     alt="QR" style="width:100px;height:100px;" />
-                <div class="mt-1 fw-bold">$@ticket.PrecioPagado.ToString("N2")</div>
-            </div>
+    <div class="ticket-card">
+        <div class="ticket-info">
+            <div class="ticket-event">@ticket.EventName</div>
+            <div class="ticket-date">📅 @ticket.EventDate?.ToString("dddd dd 'de' MMMM yyyy — HH:mm", new System.Globalization.CultureInfo("es-AR"))</div>
+            @if (!string.IsNullOrEmpty(ticket.SeatInfo))
+            {
+                <div class="ticket-seat mt-1">🪑 @ticket.SeatInfo</div>
+            }
+            <div class="ticket-code">Código: @ticket.Code</div>
+        </div>
+        <div class="ticket-qr">
+            @if (!string.IsNullOrEmpty(ticket.QrCode))
+            {
+                <img src="data:image/png;base64,@ticket.QrCode" alt="QR" style="width:90px;height:90px;" />
+            }
+            else
+            {
+                <div style="width:90px;height:90px;background:#f3f4f6;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:0.75rem;">QR</div>
+            }
+            <div class="ticket-price">$@ticket.Price.ToString("N0")</div>
         </div>
     </div>
 }
 
 @section Scripts {
     <script>
-        window.addEventListener('load', function () { window.print(); });
-    </script>
+    window.addEventListener('load', function () { window.print(); });
+</script>
 }

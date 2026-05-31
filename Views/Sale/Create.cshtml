@@ -1,138 +1,213 @@
 @model events_tickets.Models.SaleViewModel
 @{
-    ViewData["Title"] = "Sell Tickets";
+    ViewData["Title"] = "Box Office";
+    ViewData["Section"] = "boxoffice";
+    var zonas = Model.AsientosDisponibles.GroupBy(a => a.Zona).ToList();
+    var filasPorZona = Model.AsientosDisponibles
+        .GroupBy(a => a.Zona)
+        .ToDictionary(
+            g => g.Key ?? "General",
+            g => g.GroupBy(a => a.Fila).OrderBy(f => f.Key).ToList()
+        );
 }
 
-<div class="row">
-    <div class="col-md-4">
-        <div class="card mb-3">
-            <div class="card-header bg-dark text-white">Event</div>
-            <div class="card-body">
-                @if (Model.Evento != null)
-                {
-                    <h5>@Model.Evento.NombreEvento</h5>
-                    <p class="mb-1"><strong>Date:</strong> @Model.Evento.FechaEvento.ToString("MMM dd, yyyy HH:mm")</p>
-                    <p class="mb-1"><strong>Type:</strong> @Model.Evento.TipoEvento</p>
-                    <p class="mb-0">
-                        <strong>Available:</strong>
-                        <span class="badge bg-success">@Model.Evento.AsientosDisponibles seats</span>
-                    </p>
-                }
-            </div>
-        </div>
-        <a asp-controller="Dashboard" asp-action="Index" class="btn btn-outline-secondary w-100">← Back</a>
+<div class="page-header mb-2">
+    <div class="page-title">
+        @Model.Evento?.NombreEvento
     </div>
+    <a asp-controller="Dashboard" asp-action="Index" class="btn btn-outline btn-sm">← Volver</a>
+</div>
 
-    <div class="col-md-8">
-        <form asp-action="Store" method="post">
-            <input type="hidden" asp-for="EventoId" />
-            <input type="hidden" name="asientosJson" id="asientosJson" value="[]" />
+<div class="event-bar mb-2">
+    <div class="event-bar-chip">
+        📅 @Model.Evento?.FechaEvento.ToString("dd MMM, HH:mm")
+    </div>
+    <div class="event-bar-chip">
+        🎭 @Model.Evento?.TipoEvento
+    </div>
+    <div class="event-bar-chip active">
+        🎫 Nueva Venta
+    </div>
+    <div class="text-sm text-muted" style="margin-left:auto;">
+        <span class="badge badge-success">@Model.Evento?.AsientosDisponibles disponibles</span>
+    </div>
+</div>
 
-            <div class="card mb-3">
-                <div class="card-header bg-dark text-white">
-                    Select Seats
-                    <span class="badge bg-warning text-dark ms-2" id="selectedCount">0 selected</span>
+<form asp-action="Store" method="post" id="saleForm">
+    <input type="hidden" asp-for="EventoId" />
+    <input type="hidden" name="asientosJson" id="asientosJson" value="[]" />
+
+    <div class="sale-wrapper">
+
+        <!-- LEFT: Seat map -->
+        <div class="sale-left">
+            <div class="seat-map-card">
+                <div class="stage">ESCENARIO</div>
+
+                <div class="seat-legend">
+                    <div class="legend-item"><div class="legend-dot available"></div> Disponible</div>
+                    <div class="legend-item"><div class="legend-dot selected"></div> Seleccionado</div>
+                    <div class="legend-item"><div class="legend-dot occupied"></div> Ocupado</div>
                 </div>
-                <div class="card-body">
-                    @if (!Model.AsientosDisponibles.Any())
-                    {
-                        <p class="text-muted">No seats available.</p>
-                    }
-                    else
-                    {
-                        @foreach (var zona in Model.AsientosDisponibles.GroupBy(a => a.Zona))
+
+                @if (!Model.AsientosDisponibles.Any())
+                {
+                    <div style="text-align:center; color:var(--muted); padding:40px 0;">
+                        No hay asientos disponibles para este evento.
+                    </div>
+                }
+
+                @foreach (var zonaKv in filasPorZona)
+                {
+                    <div class="zone-label">@zonaKv.Key</div>
+                    <div class="seat-grid">
+                        @foreach (var fila in zonaKv.Value)
                         {
-                            <p class="mb-1"><strong>@zona.Key</strong></p>
-                            <div class="d-flex flex-wrap gap-1 mb-3">
-                                @foreach (var asiento in zona)
+                            <div class="seat-row">
+                                <span class="row-label">@fila.Key</span>
+                                @foreach (var asiento in fila.OrderBy(a => a.Numero))
                                 {
+                                    var disponible = asiento.Estado?.ToLower() == "disponible";
                                     <button type="button"
-                                            class="btn btn-sm btn-outline-secondary seat-btn"
+                                            class="seat @(!disponible ? "" : "")"
                                             data-id="@asiento.IdEventoAsiento"
-                                            data-precio="@asiento.Precio"
-                                            title="@asiento.CodigoAsiento — $@asiento.Precio.ToString("N2")">
-                                        @asiento.CodigoAsiento
+                                            data-precio="@asiento.Precio.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                            data-codigo="@asiento.CodigoAsiento"
+                                            data-zona="@asiento.Zona"
+                                            data-fila="@asiento.Fila"
+                                            data-numero="@asiento.Numero"
+                                            @(!disponible ? "disabled" : "")
+                                            title="@asiento.CodigoAsiento — $@asiento.Precio.ToString("N0")">
                                     </button>
                                 }
                             </div>
                         }
-                    }
-                </div>
+                    </div>
+                }
             </div>
+        </div>
 
-            <div class="card mb-3">
-                <div class="card-header bg-dark text-white">Customer</div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label asp-for="CustomerName" class="form-label">Full name *</label>
-                            <input asp-for="CustomerName" class="form-control" required />
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label asp-for="CustomerDocument" class="form-label">Document / ID *</label>
-                            <input asp-for="CustomerDocument" class="form-control" required />
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label asp-for="CustomerEmail" class="form-label">Email *</label>
-                            <input asp-for="CustomerEmail" type="email" class="form-control" required />
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label asp-for="CustomerPhone" class="form-label">Phone</label>
-                            <input asp-for="CustomerPhone" class="form-control" />
-                        </div>
+        <!-- RIGHT: Order panel -->
+        <div class="sale-right">
+            <div class="order-panel">
+                <div class="order-header">
+                    <span class="order-title">Tu Pedido</span>
+                    <span class="order-count" id="seatCount">0 butacas</span>
+                </div>
+
+                <!-- Customer form -->
+                <div class="customer-form">
+                    <div class="customer-form-title">Cliente</div>
+                    <input asp-for="CustomerName" class="form-control" placeholder="Nombre completo *" required />
+                    <input asp-for="CustomerDocument" class="form-control" placeholder="Documento / DNI *" required />
+                    <input asp-for="CustomerEmail" type="email" class="form-control" placeholder="Email *" required />
+                    <input asp-for="CustomerPhone" class="form-control" placeholder="Teléfono (opcional)" />
+                </div>
+
+                <div class="order-body" id="seatList">
+                    <div class="order-empty" id="emptyMsg">
+                        Seleccioná asientos en el mapa
                     </div>
                 </div>
-            </div>
 
-            <div class="card mb-3 no-print" id="totalCard" style="display:none!important;">
-                <div class="card-body d-flex justify-content-between align-items-center">
-                    <span>Total: <strong id="totalLabel">$0.00</strong></span>
-                    <button type="submit" class="btn btn-success">Confirm sale & print</button>
-                </div>
-            </div>
-            <div id="totalCardVisible" style="display:none">
-                <div class="card mb-3">
-                    <div class="card-body d-flex justify-content-between align-items-center">
-                        <span>Total: <strong id="totalLabel2">$0.00</strong></span>
-                        <button type="submit" class="btn btn-success">Confirm sale & print</button>
+                <div class="order-divider"></div>
+
+                <div class="order-totals">
+                    <div class="total-row">
+                        <span>Subtotal</span>
+                        <span id="subtotalLabel">$0</span>
+                    </div>
+                    <div class="total-row grand">
+                        <span>TOTAL</span>
+                        <span id="totalLabel">$0</span>
                     </div>
                 </div>
+
+                <div class="order-footer">
+                    <div class="payment-btns">
+                        <button type="button" class="btn-payment active" id="btnEfectivo" onclick="selectPayment('efectivo')">
+                            💵 Efectivo
+                        </button>
+                        <button type="button" class="btn-payment" id="btnTarjeta" onclick="selectPayment('tarjeta')">
+                            💳 Tarjeta
+                        </button>
+                    </div>
+                    <input type="hidden" name="MetodoPago" id="metodoPago" value="efectivo" />
+                    <button type="submit" class="btn btn-accent btn-lg" id="confirmBtn" disabled>
+                        🖨 Confirmar Venta
+                    </button>
+                </div>
             </div>
-        </form>
+        </div>
     </div>
-</div>
+</form>
 
 @section Scripts {
-    <script>
-        const selected = new Map(); // idEventoAsiento -> precio
+<script>
+    const selected = new Map(); // idEventoAsiento -> {precio, codigo, zona, fila, numero}
+    const cargo_servicio = 0; // update if API returns service charge per zone
 
-        document.querySelectorAll('.seat-btn').forEach(btn => {
-            btn.addEventListener('click', function () {
-                const id = parseInt(this.dataset.id);
-                const precio = parseFloat(this.dataset.precio);
+    function fmt(n) { return '$' + n.toLocaleString('es-AR', {minimumFractionDigits: 0}); }
 
-                if (selected.has(id)) {
-                    selected.delete(id);
-                    this.classList.remove('btn-primary');
-                    this.classList.add('btn-outline-secondary');
-                } else {
-                    selected.set(id, precio);
-                    this.classList.remove('btn-outline-secondary');
-                    this.classList.add('btn-primary');
-                }
+    function refresh() {
+        const count = selected.size;
+        document.getElementById('seatCount').textContent = count + (count === 1 ? ' butaca' : ' butacas');
+        document.getElementById('asientosJson').value = JSON.stringify([...selected.keys()]);
 
-                const count = selected.size;
-                const total = [...selected.values()].reduce((a, b) => a + b, 0);
+        const subtotal = [...selected.values()].reduce((s, x) => s + x.precio, 0);
+        document.getElementById('subtotalLabel').textContent = fmt(subtotal);
+        document.getElementById('totalLabel').textContent = fmt(subtotal);
 
-                document.getElementById('selectedCount').textContent = count + ' selected';
-                document.getElementById('asientosJson').value = JSON.stringify([...selected.keys()]);
+        const list = document.getElementById('seatList');
+        const emptyMsg = document.getElementById('emptyMsg');
+        const confirmBtn = document.getElementById('confirmBtn');
 
-                const totalText = '$' + total.toFixed(2);
-                document.getElementById('totalLabel2').textContent = totalText;
+        if (count === 0) {
+            list.innerHTML = '<div class="order-empty" id="emptyMsg">Seleccioná asientos en el mapa</div>';
+            confirmBtn.disabled = true;
+            return;
+        }
 
-                const cardVisible = document.getElementById('totalCardVisible');
-                cardVisible.style.display = count > 0 ? 'block' : 'none';
-            });
+        confirmBtn.disabled = false;
+        let html = '';
+        for (const [id, s] of selected) {
+            html += `
+            <div class="seat-item">
+                <div class="seat-item-icon">🪑</div>
+                <div class="seat-item-info">
+                    <div class="seat-item-name">Fila ${s.fila}, Asiento ${s.numero}</div>
+                    <div class="seat-item-zone">${s.zona}</div>
+                </div>
+                <div class="seat-item-price">${fmt(s.precio)}</div>
+            </div>`;
+        }
+        list.innerHTML = html;
+    }
+
+    document.querySelectorAll('.seat:not(:disabled)').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const id = parseInt(this.dataset.id);
+            if (selected.has(id)) {
+                selected.delete(id);
+                this.classList.remove('selected');
+            } else {
+                selected.set(id, {
+                    precio: parseFloat(this.dataset.precio),
+                    codigo: this.dataset.codigo,
+                    zona: this.dataset.zona,
+                    fila: this.dataset.fila,
+                    numero: this.dataset.numero
+                });
+                this.classList.add('selected');
+            }
+            refresh();
         });
-    </script>
+    });
+
+    function selectPayment(method) {
+        document.getElementById('metodoPago').value = method;
+        document.getElementById('btnEfectivo').classList.toggle('active', method === 'efectivo');
+        document.getElementById('btnTarjeta').classList.toggle('active', method === 'tarjeta');
+    }
+</script>
 }
