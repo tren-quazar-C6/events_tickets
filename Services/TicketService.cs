@@ -71,14 +71,16 @@ public class TicketService : ITicketService
         foreach (var t in tickets)
         {
             await conn.ExecuteAsync("""
-                                    INSERT INTO tickets
-                                      (id_venta, id_evento, id_cliente, id_evento_asiento, codigo_asiento,
-                                       zona, codigo_unico, qr_token, qr_imagen_base64, precio_pagado)
+                                    INSERT INTO TICKETS
+                                      (id_venta, id_estado_ticket, id_evento_asiento, codigo_unico,
+                                       qr_token, precio_pagado, fecha_generacion, fecha_impresion)
                                     VALUES
-                                      (@IdVenta, @IdEvento, @IdCliente, @IdEventoAsiento, @CodigoAsiento,
-                                       @Zona, @CodigoUnico, @QrToken, @QrImagenBase64, @PrecioPagado)
+                                      (@IdVenta, 2, @IdEventoAsiento, @CodigoUnico,
+                                       @QrToken, @PrecioPagado, UTC_TIMESTAMP(), UTC_TIMESTAMP())
                                     """, t, tx);
             t.IdTicket = await conn.ExecuteScalarAsync<int>("SELECT LAST_INSERT_ID()", transaction: tx);
+            t.EstadoTicket = "PAGADO";
+            t.FechaEmision = DateTime.UtcNow;
         }
 
         return tickets;
@@ -87,10 +89,28 @@ public class TicketService : ITicketService
     {
         using var conn = _db.Create();
         var sql = """
-            SELECT t.*, c.nombre as nombre_cliente, e.nombre_evento, e.fecha_evento
-            FROM tickets t
-            JOIN clientes c ON c.id_cliente = t.id_cliente
-            LEFT JOIN eventos e ON e.id_evento = t.id_evento
+            SELECT
+                t.id_ticket,
+                t.codigo_unico,
+                t.qr_token,
+                t.precio_pagado,
+                t.fecha_generacion,
+                et.nombre_estado AS estado_ticket,
+                u.id_usuario AS id_cliente,
+                u.nombre AS nombre_cliente,
+                e.id_evento,
+                e.nombre_evento,
+                e.fecha_evento,
+                z.nombre_zona AS zona,
+                CONCAT(a.fila, '-', a.numero) AS codigo_asiento
+            FROM TICKETS t
+            JOIN ESTADO_TICKET et ON et.id_estado_ticket = t.id_estado_ticket
+            JOIN VENTAS v ON v.id_venta = t.id_venta
+            JOIN USUARIO u ON u.id_usuario = v.id_usuario
+            JOIN EVENTO_ASIENTO ea ON ea.id_evento_asiento = t.id_evento_asiento
+            JOIN EVENTOS e ON e.id_evento = ea.id_evento
+            JOIN ASIENTOS a ON a.id_asiento = ea.id_asiento
+            JOIN ZONAS z ON z.id_zona = a.id_zona
             WHERE t.id_ticket = @id
             """;
         var t = await conn.QueryFirstOrDefaultAsync(sql, new { id });
@@ -101,10 +121,28 @@ public class TicketService : ITicketService
     {
         using var conn = _db.Create();
         var sql = """
-            SELECT t.*, c.nombre as nombre_cliente, e.nombre_evento, e.fecha_evento
-            FROM tickets t
-            JOIN clientes c ON c.id_cliente = t.id_cliente
-            LEFT JOIN eventos e ON e.id_evento = t.id_evento
+            SELECT
+                t.id_ticket,
+                t.codigo_unico,
+                t.qr_token,
+                t.precio_pagado,
+                t.fecha_generacion,
+                et.nombre_estado AS estado_ticket,
+                u.id_usuario AS id_cliente,
+                u.nombre AS nombre_cliente,
+                e.id_evento,
+                e.nombre_evento,
+                e.fecha_evento,
+                z.nombre_zona AS zona,
+                CONCAT(a.fila, '-', a.numero) AS codigo_asiento
+            FROM TICKETS t
+            JOIN ESTADO_TICKET et ON et.id_estado_ticket = t.id_estado_ticket
+            JOIN VENTAS v ON v.id_venta = t.id_venta
+            JOIN USUARIO u ON u.id_usuario = v.id_usuario
+            JOIN EVENTO_ASIENTO ea ON ea.id_evento_asiento = t.id_evento_asiento
+            JOIN EVENTOS e ON e.id_evento = ea.id_evento
+            JOIN ASIENTOS a ON a.id_asiento = ea.id_asiento
+            JOIN ZONAS z ON z.id_zona = a.id_zona
             WHERE t.codigo_unico = @codigoOQrToken OR t.qr_token = @codigoOQrToken
             """;
         var t = await conn.QueryFirstOrDefaultAsync(sql, new { codigoOQrToken });
@@ -114,17 +152,37 @@ public class TicketService : ITicketService
     public async Task<List<TicketResumenDto>> ObtenerPorVentaAsync(int idVenta)
     {
         using var conn = _db.Create();
-        var rows = await conn.QueryAsync(
-            "SELECT * FROM tickets WHERE id_venta = @idVenta", new { idVenta });
+        var rows = await conn.QueryAsync("""
+            SELECT t.id_ticket, t.codigo_unico, t.qr_token, t.precio_pagado, t.fecha_generacion,
+                   et.nombre_estado AS estado_ticket,
+                   z.nombre_zona AS zona, CONCAT(a.fila, '-', a.numero) AS codigo_asiento
+            FROM TICKETS t
+            JOIN ESTADO_TICKET et ON et.id_estado_ticket = t.id_estado_ticket
+            JOIN EVENTO_ASIENTO ea ON ea.id_evento_asiento = t.id_evento_asiento
+            JOIN ASIENTOS a ON a.id_asiento = ea.id_asiento
+            JOIN ZONAS z ON z.id_zona = a.id_zona
+            WHERE t.id_venta = @idVenta
+            ORDER BY t.id_ticket
+            """, new { idVenta });
         return rows.Select(ToResumen).ToList();
     }
 
     public async Task<List<TicketResumenDto>> ObtenerPorClienteAsync(int idCliente)
     {
         using var conn = _db.Create();
-        var rows = await conn.QueryAsync(
-            "SELECT * FROM tickets WHERE id_cliente = @idCliente ORDER BY fecha_emision DESC",
-            new { idCliente });
+        var rows = await conn.QueryAsync("""
+            SELECT t.id_ticket, t.codigo_unico, t.qr_token, t.precio_pagado, t.fecha_generacion,
+                   et.nombre_estado AS estado_ticket,
+                   z.nombre_zona AS zona, CONCAT(a.fila, '-', a.numero) AS codigo_asiento
+            FROM TICKETS t
+            JOIN ESTADO_TICKET et ON et.id_estado_ticket = t.id_estado_ticket
+            JOIN VENTAS v ON v.id_venta = t.id_venta
+            JOIN EVENTO_ASIENTO ea ON ea.id_evento_asiento = t.id_evento_asiento
+            JOIN ASIENTOS a ON a.id_asiento = ea.id_asiento
+            JOIN ZONAS z ON z.id_zona = a.id_zona
+            WHERE v.id_usuario = @idCliente
+            ORDER BY t.fecha_generacion DESC
+            """, new { idCliente });
         return rows.Select(ToResumen).ToList();
     }
 
@@ -135,9 +193,9 @@ public class TicketService : ITicketService
         using var tx = conn.BeginTransaction();
 
         var ticket = await conn.QueryFirstOrDefaultAsync("""
-            SELECT * FROM tickets
+            SELECT * FROM TICKETS
             WHERE (codigo_unico = @codigoOQrToken OR qr_token = @codigoOQrToken)
-              AND estado_ticket = 'activo'
+              AND id_estado_ticket = 2
             FOR UPDATE
             """, new { codigoOQrToken }, tx);
 
@@ -148,12 +206,10 @@ public class TicketService : ITicketService
         }
 
         await conn.ExecuteAsync("""
-            UPDATE tickets
-            SET estado_ticket = 'usado',
-                fecha_validacion = NOW(),
-                id_staff_validacion = @idStaff
+            UPDATE TICKETS
+            SET id_estado_ticket = 3
             WHERE id_ticket = @idTicket
-            """, new { idStaff, idTicket = (int)ticket.id_ticket }, tx);
+            """, new { idTicket = (int)ticket.id_ticket }, tx);
 
         tx.Commit();
         return await ObtenerAsync((int)ticket.id_ticket);
@@ -211,7 +267,7 @@ public class TicketService : ITicketService
         Zona = r.zona,
         PrecioPagado = r.precio_pagado,
         EstadoTicket = r.estado_ticket,
-        FechaEmision = r.fecha_emision
+        FechaEmision = r.fecha_generacion
     };
 
     private static TicketDetalleDto ToDetalle(dynamic t) => new()
@@ -223,7 +279,7 @@ public class TicketService : ITicketService
         Zona = t.zona,
         PrecioPagado = t.precio_pagado,
         EstadoTicket = t.estado_ticket,
-        FechaEmision = t.fecha_emision,
+        FechaEmision = t.fecha_generacion,
         IdEvento = t.id_evento,
         NombreEvento = t.nombre_evento,
         FechaEvento = t.fecha_evento,

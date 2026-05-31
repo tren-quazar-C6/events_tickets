@@ -6,12 +6,12 @@ namespace events_tickets.Controllers;
 
 public class DashboardController : Controller
 {
-    private readonly ApiService _api;
+    private readonly IEventService _events;
     private readonly SessionService _session;
 
-    public DashboardController(ApiService api, SessionService session)
+    public DashboardController(IEventService events, SessionService session)
     {
-        _api = api;
+        _events = events;
         _session = session;
     }
 
@@ -20,15 +20,7 @@ public class DashboardController : Controller
         if (!_session.IsAuthenticated())
             return RedirectToAction("Login", "Auth");
 
-        var result = await _api.GetEventosAsync();
-        if (!result.Success)
-        {
-            TempData["message"] = result.Message;
-            TempData["success"] = "False";
-            return View(new List<EventoResumen>());
-        }
-
         ViewBag.Employee = _session.GetEmployee();
-        return View(result.Data);
+        return View(await _events.GetActiveAsync());
     }
 }

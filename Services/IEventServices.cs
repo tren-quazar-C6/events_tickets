@@ -5,9 +5,9 @@ namespace events_tickets.Services;
 
 public interface IEventService
 {
-    Task<Event> CreateAsync(CreateEventRequest req);
-    Task<Event?> GetAsync(string id);
-    Task<List<Event>> GetActiveAsync();
-    Task<List<Seat>> CreateSeatsAsync(string eventId, List<SeatDefinition> seats);
-    Task<List<Seat>> GetAvailableSeatsAsync(string eventId);
+    Task<EventoDetalle> CreateAsync(CreateEventRequest req);
+    Task<EventoDetalle?> GetAsync(int id);
+    Task<List<EventoResumen>> GetActiveAsync();
+    Task<List<EventoAsiento>> CreateSeatsAsync(int eventId, List<SeatDefinition> seats);
+    Task<List<EventoAsiento>> GetAvailableSeatsAsync(int eventId);
 }

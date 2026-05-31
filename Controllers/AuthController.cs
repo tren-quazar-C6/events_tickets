@@ -6,12 +6,12 @@ namespace events_tickets.Controllers;
 
 public class AuthController : Controller
 {
-    private readonly ApiService _api;
+    private readonly IEmployeeService _employees;
     private readonly SessionService _session;
 
-    public AuthController(ApiService api, SessionService session)
+    public AuthController(IEmployeeService employees, SessionService session)
     {
-        _api = api;
+        _employees = employees;
         _session = session;
     }
 
@@ -25,23 +25,16 @@ public class AuthController : Controller
     [HttpPost]
     public async Task<IActionResult> Login(LoginViewModel model)
     {
-        var result = await _api.LoginAsync(model.Email, model.Password);
-        if (!result.Success)
+        var employee = await _employees.LoginAsync(model.Email, model.Password);
+        if (employee == null)
         {
-            TempData["message"] = result.Message ?? "Login failed";
+            TempData["message"] = "Invalid credentials or employee is not authorized for ticket sales.";
             TempData["success"] = "False";
             return View(model);
         }
 
-        var data = result.Data!;
-        _session.SetToken(data.Token!);
-        _session.SetEmployee(new Employee
-        {
-            IdStaff = data.IdStaff,
-            Nombre = data.Nombre ?? "",
-            Email = data.Email ?? "",
-            Rol = data.Rol ?? ""
-        });
+        _session.SetToken(Guid.NewGuid().ToString("N"));
+        _session.SetEmployee(employee);
 
         return RedirectToAction("Index", "Dashboard");
     }
