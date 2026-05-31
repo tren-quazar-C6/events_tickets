@@ -112,4 +112,28 @@ public class EventService : IEventService
 
         return rows.ToList();
     }
+    public async Task<List<EventoAsiento>> GetAllSeatsAsync(int eventId)
+    {
+        using var conn = _db.Create();
+        var rows = await conn.QueryAsync<EventoAsiento>("""
+            SELECT
+                ea.id_evento_asiento AS IdEventoAsiento,
+                a.id_asiento AS IdAsiento,
+                CONCAT(a.fila, '-', a.numero) AS CodigoAsiento,
+                a.fila AS Fila,
+                a.numero AS Numero,
+                z.id_zona AS IdZona,
+                z.nombre_zona AS Zona,
+                z.color_hex AS ColorZona,
+                ez.precio AS Precio,
+                ea.estado AS Estado
+            FROM EVENTO_ASIENTO ea
+            JOIN ASIENTOS a ON a.id_asiento = ea.id_asiento
+            JOIN EVENTO_ZONA ez ON ez.id_evento = ea.id_evento AND ez.id_zona = a.id_zona
+            JOIN ZONAS z ON z.id_zona = a.id_zona
+            WHERE ea.id_evento = @eventId
+            ORDER BY z.nombre_zona, a.fila, a.numero
+            """, new { eventId });
+        return rows.ToList();
+    }
 }

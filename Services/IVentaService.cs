@@ -9,4 +9,5 @@ public interface IVentaService
     Task<VentaDetalleDto?> ObtenerAsync(int id);
     Task<List<VentaResumenDto>> ObtenerPorClienteAsync(int idCliente);
     Task<VentaResumenDto?> CancelarAsync(int id, string motivo);
+    Task<List<VentaResumenDto>> GetAllAsync();
 }

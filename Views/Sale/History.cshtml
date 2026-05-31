@@ -1,0 +1,65 @@
+@model List<events_tickets.Dtos.VentaResumenDto>
+@{
+    ViewData["Title"] = "Historial de Ventas";
+    ViewData["Section"] = "history";
+}
+
+<div class="page-header mb-2">
+    <div>
+        <div class="page-title">Historial de Ventas</div>
+        <div class="page-subtitle">@Model.Count venta(s) registradas</div>
+    </div>
+</div>
+
+<div class="card">
+    @if (!Model.Any())
+    {
+        <div style="text-align:center;padding:40px 0;color:var(--muted);">
+            No hay ventas registradas todavía.
+        </div>
+    }
+    else
+    {
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Evento</th>
+                    <th>Cliente</th>
+                    <th>Tickets</th>
+                    <th>Total</th>
+                    <th>Estado</th>
+                    <th>Fecha</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var v in Model)
+                {
+                    <tr>
+                        <td class="text-muted">#@v.IdVenta</td>
+                        <td>@(v.NombreEvento ?? "—")</td>
+                        <td>
+                            <div>@v.NombreCliente</div>
+                            <div class="text-muted text-sm">@v.EmailCliente</div>
+                        </td>
+                        <td>@v.CantidadTickets</td>
+                        <td class="fw-bold">$@v.Total.ToString("N0")</td>
+                        <td>
+                            @{
+                                var badgeClass = v.Estado == "APPROVED" ? "badge-success"
+                                    : v.Estado == "VOIDED" ? "badge-danger" : "badge-warning";
+                            }
+                            <span class="badge @badgeClass">@v.Estado</span>
+                        </td>
+                        <td class="text-muted text-sm">@v.FechaVenta.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td>
+                            <a asp-controller="Ticket" asp-action="Print" asp-route-ventaId="@v.IdVenta"
+                               class="btn btn-outline btn-sm">Ver</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>

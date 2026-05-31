@@ -179,6 +179,49 @@ public class VentaService : IVentaService
             CantidadTickets = (int)v.cantidad_tickets
         }).ToList();
     }
+    
+    public async Task<List<VentaResumenDto>> GetAllAsync()
+    {
+        using var conn = _db.Create();
+        var rows = await conn.QueryAsync("""
+             SELECT
+                 v.id_venta,
+                 e.id_evento,
+                 e.nombre_evento,
+                 e.fecha_evento,
+                 u.id_usuario,
+                 u.nombre AS nombre_cliente,
+                 u.email AS email_cliente,
+                 v.id_staff,
+                 v.total,
+                 v.estado_pago,
+                 v.fecha_venta,
+                 COUNT(t.id_ticket) AS cantidad_tickets
+             FROM VENTAS v
+             JOIN USUARIO u ON u.id_usuario = v.id_usuario
+             LEFT JOIN TICKETS t ON t.id_venta = v.id_venta
+             LEFT JOIN EVENTO_ASIENTO ea ON ea.id_evento_asiento = t.id_evento_asiento
+             LEFT JOIN EVENTOS e ON e.id_evento = ea.id_evento
+             GROUP BY v.id_venta, e.id_evento, e.nombre_evento, e.fecha_evento,
+                      u.id_usuario, u.nombre, u.email, v.id_staff, v.total, v.estado_pago, v.fecha_venta
+             ORDER BY v.fecha_venta DESC
+             """);
+        return rows.Select(v => new VentaResumenDto
+        {
+            IdVenta = v.id_venta,
+            IdEvento = v.id_evento ?? 0,
+            NombreEvento = v.nombre_evento,
+            FechaEvento = v.fecha_evento,
+            IdCliente = v.id_usuario,
+            NombreCliente = v.nombre_cliente,
+            EmailCliente = v.email_cliente,
+            IdStaff = v.id_staff,
+            Total = v.total,
+            Estado = v.estado_pago,
+            FechaVenta = v.fecha_venta,
+            CantidadTickets = (int)v.cantidad_tickets
+        }).ToList();
+    }
 
     public async Task<VentaResumenDto?> CancelarAsync(int id, string motivo)
     {

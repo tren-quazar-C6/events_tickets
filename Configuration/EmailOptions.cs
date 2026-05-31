@@ -8,7 +8,7 @@ public sealed class EmailOptions
     public string Username { get; set; } = "";
     public string Password { get; set; } = "";
     public string FromAddress { get; set; } = "";
-    public string FromName { get; set; } = "Taquilla";
+    public string FromName { get; set; } = "Tickify";
     public bool EnableSsl { get; set; } = true;
 
     public bool IsConfigured =>
