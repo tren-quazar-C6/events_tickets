@@ -1,10 +1,10 @@
-@model events_tickets.Models.Sale
+@model events_tickets.Dtos.VentaDetalleDto
 @{
     ViewData["Title"] = "Tickets";
 }
 
 <div class="no-print d-flex justify-content-between align-items-center mb-3">
-    <h4>Sale #@Model.Id — @Model.EventName</h4>
+    <h4>Sale #@Model.IdVenta — @Model.NombreEvento</h4>
     <div>
         <a asp-controller="Dashboard" asp-action="Index" class="btn btn-outline-secondary me-2">← Dashboard</a>
         <button onclick="window.print()" class="btn btn-primary">🖨 Print again</button>
@@ -14,7 +14,14 @@
 <div class="no-print mb-3">
     <div class="alert alert-success">
         Sale completed. <strong>@Model.Tickets.Count ticket(s)</strong>
-        sent to <strong>@Model.Customer.Email</strong>. Printing now...
+        @if (!string.IsNullOrEmpty(Model.EmailCliente))
+        {
+            <span>
+                @(ViewBag.EmailSent == true ? "sent to" : "ready for")
+                <strong>@Model.EmailCliente</strong>.
+            </span>
+        }
+        Printing now...
     </div>
 </div>
 
@@ -23,25 +30,22 @@
     <div class="border rounded p-3 mb-3" style="page-break-inside: avoid;">
         <div class="row align-items-center">
             <div class="col-8">
-                <h5 class="mb-1">@ticket.EventName</h5>
-                <p class="mb-1 text-muted">@ticket.EventDate.ToString("dddd, MMM dd yyyy — HH:mm")</p>
+                <h5 class="mb-1">@Model.NombreEvento</h5>
+                <p class="mb-1 text-muted">@((Model.FechaEvento ?? Model.FechaVenta).ToString("dddd, MMM dd yyyy — HH:mm"))</p>
                 <hr class="my-2" />
-                <p class="mb-1"><strong>@ticket.CustomerName</strong></p>
-                @if (!string.IsNullOrEmpty(ticket.SeatInfo))
+                <p class="mb-1"><strong>@Model.NombreCliente</strong></p>
+                @if (!string.IsNullOrEmpty(ticket.CodigoAsiento))
                 {
-                    <p class="mb-1">Seat: <strong>@ticket.SeatInfo</strong></p>
+                    <p class="mb-1">Seat: <strong>@ticket.Zona - @ticket.CodigoAsiento</strong></p>
                 }
                 <p class="mb-0 text-muted" style="font-size:0.8rem;">
-                    Code: <strong>@ticket.Code</strong>
+                    Code: <strong>@ticket.CodigoUnico</strong>
                 </p>
             </div>
             <div class="col-4 text-center">
-                @if (!string.IsNullOrEmpty(ticket.QrCode))
-                {
-                    <img src="data:image/png;base64,@ticket.QrCode"
-                         alt="QR" style="width:100px;height:100px;" />
-                }
-                <div class="mt-1 fw-bold">$@ticket.Price.ToString("N2")</div>
+                <img src="/api/tickets/@ticket.IdTicket/qr"
+                     alt="QR" style="width:100px;height:100px;" />
+                <div class="mt-1 fw-bold">$@ticket.PrecioPagado.ToString("N2")</div>
             </div>
         </div>
     </div>

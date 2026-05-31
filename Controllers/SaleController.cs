@@ -1,4 +1,5 @@
 using events_tickets.Models;
+using events_tickets.Contracts;
 using events_tickets.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -6,12 +7,16 @@ namespace events_tickets.Controllers;
 
 public class SaleController : Controller
 {
-    private readonly ApiService _api;
+    private readonly IClienteService _clientes;
+    private readonly IEventService _events;
+    private readonly IVentaService _ventas;
     private readonly SessionService _session;
 
-    public SaleController(ApiService api, SessionService session)
+    public SaleController(IClienteService clientes, IEventService events, IVentaService ventas, SessionService session)
     {
-        _api = api;
+        _clientes = clientes;
+        _events = events;
+        _ventas = ventas;
         _session = session;
     }
 
@@ -20,21 +25,19 @@ public class SaleController : Controller
         if (!_session.IsAuthenticated())
             return RedirectToAction("Login", "Auth");
 
-        var eventoResult = await _api.GetEventoAsync(eventoId);
-        if (!eventoResult.Success)
+        var evento = await _events.GetAsync(eventoId);
+        if (evento == null)
         {
-            TempData["message"] = eventoResult.Message;
+            TempData["message"] = "Event not found";
             TempData["success"] = "False";
             return RedirectToAction("Index", "Dashboard");
         }
 
-        var asientosResult = await _api.GetAsientosAsync(eventoId);
-
         var model = new SaleViewModel
         {
             EventoId = eventoId,
-            Evento = eventoResult.Data,
-            AsientosDisponibles = asientosResult.Data ?? new()
+            Evento = evento,
+            AsientosDisponibles = await _events.GetAvailableSeatsAsync(eventoId)
         };
 
         return View(model);
@@ -60,25 +63,41 @@ public class SaleController : Controller
             return await ReloadCreate(model);
         }
 
-        var result = await _api.CreateVentaAsync(model);
-        if (!result.Success)
+        try
         {
-            TempData["message"] = result.Message;
+            var cliente = await _clientes.ObtenerPorDocumentoAsync(model.CustomerDocument)
+                ?? await _clientes.CrearAsync(new CrearClienteRequest(
+                    model.CustomerName,
+                    model.CustomerDocument,
+                    model.CustomerEmail,
+                    model.CustomerPhone));
+
+            var employee = _session.GetEmployee();
+            if (employee == null)
+                return RedirectToAction("Login", "Auth");
+
+            var venta = await _ventas.CrearAsync(new CrearVentaRequest(
+                model.EventoId,
+                cliente.IdCliente,
+                employee.IdStaff,
+                model.AsientosSeleccionados));
+
+            TempData["message"] = "Sale completed successfully";
+            TempData["success"] = "True";
+            return RedirectToAction("Print", "Ticket", new { ventaId = venta.IdVenta });
+        }
+        catch (InvalidOperationException ex)
+        {
+            TempData["message"] = ex.Message;
             TempData["success"] = "False";
             return await ReloadCreate(model);
         }
-
-        TempData["message"] = "Sale completed successfully";
-        TempData["success"] = "True";
-        return RedirectToAction("Print", "Ticket", new { ventaId = result.Data!.Id });
     }
 
     private async Task<IActionResult> ReloadCreate(SaleViewModel model)
     {
-        var eventoResult = await _api.GetEventoAsync(model.EventoId);
-        var asientosResult = await _api.GetAsientosAsync(model.EventoId);
-        model.Evento = eventoResult.Data;
-        model.AsientosDisponibles = asientosResult.Data ?? new();
+        model.Evento = await _events.GetAsync(model.EventoId);
+        model.AsientosDisponibles = await _events.GetAvailableSeatsAsync(model.EventoId);
         return View("Create", model);
     }
 }

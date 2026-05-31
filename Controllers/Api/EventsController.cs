@@ -14,8 +14,8 @@ public class EventsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetActive() => Ok(await _svc.GetActiveAsync());
 
-    [HttpGet("{id}")]
-    public async Task<IActionResult> Get(string id)
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> Get(int id)
     {
         var ev = await _svc.GetAsync(id);
         return ev == null ? NotFound() : Ok(ev);
@@ -25,14 +25,18 @@ public class EventsController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateEventRequest req)
     {
         var ev = await _svc.CreateAsync(req);
-        return CreatedAtAction(nameof(Get), new { id = ev.Id }, ev);
+        return CreatedAtAction(nameof(Get), new { id = ev.IdEvento }, ev);
     }
 
-    [HttpPost("{id}/seats")]
-    public async Task<IActionResult> CreateSeats(string id, [FromBody] List<SeatDefinition> seats) =>
+    [HttpPost("{id:int}/seats")]
+    public async Task<IActionResult> CreateSeats(int id, [FromBody] List<SeatDefinition> seats) =>
         Ok(await _svc.CreateSeatsAsync(id, seats));
 
-    [HttpGet("{id}/seats/available")]
-    public async Task<IActionResult> AvailableSeats(string id) =>
+    [HttpGet("{id:int}/seats/available")]
+    public async Task<IActionResult> AvailableSeats(int id) =>
+        Ok(await _svc.GetAvailableSeatsAsync(id));
+
+    [HttpGet("{id:int}/asientos")]
+    public async Task<IActionResult> Asientos(int id, [FromQuery] bool soloDisponibles = true) =>
         Ok(await _svc.GetAvailableSeatsAsync(id));
 }

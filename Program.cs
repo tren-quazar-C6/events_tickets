@@ -1,6 +1,7 @@
 using events_tickets.Configuration;
 using events_tickets.Infrastructure;
 using events_tickets.Services;
+using Dapper;
 using MongoDB.Driver;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,6 +9,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddSession();
+DefaultTypeMap.MatchNamesWithUnderscores = true;
 
 // Mongo audit logging (existing)
 builder.Services.Configure<MongoDbOptions>(
@@ -27,16 +31,20 @@ builder.Services.AddSingleton<IDbConnectionFactory>(_ => new MySqlConnectionFact
 // Print server
 builder.Services.Configure<PrintServerOptions>(
     builder.Configuration.GetSection(PrintServerOptions.SectionName));
+builder.Services.Configure<EmailOptions>(
+    builder.Configuration.GetSection(EmailOptions.SectionName));
 builder.Services.AddHttpClient();
 
 // Domain services
 builder.Services.AddScoped<IClienteService, ClienteService>();
+builder.Services.AddScoped<IEmployeeService, EmployeeService>();
+builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<ITicketService, TicketService>();
 builder.Services.AddScoped<IVentaService, VentaService>();
 builder.Services.AddScoped<IPrintService, PrintService>();
+builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 builder.Services.AddScoped<SessionService>();
 builder.Services.AddScoped<ApiService>();
-builder.Services.AddScoped<PrintService>();
 
 var app = builder.Build();
 
@@ -49,6 +57,7 @@ if (!app.Environment.IsDevelopment())
 app.UseMiddleware<events_tickets.Middleware.RequestTracingMiddleware>();
 app.UseHttpsRedirection();
 app.UseRouting();
+app.UseSession();
 app.UseAuthorization();
 app.MapControllers();
 app.MapStaticAssets();

@@ -35,15 +35,24 @@ public sealed class RequestTracingMiddleware
         {
             _logger.LogError(exception, "Unhandled request error with trace {TraceId}", traceId);
 
-            await auditLogService.LogSystemErrorAsync(new SystemErrorEntry
+            try
             {
-                TraceId = traceId,
-                Path = context.Request.Path.Value ?? string.Empty,
-                Method = context.Request.Method,
-                ErrorType = exception.GetType().Name,
-                Message = exception.Message,
-                StackTrace = exception.StackTrace
-            }, context.RequestAborted);
+                await auditLogService.LogSystemErrorAsync(new SystemErrorEntry
+                {
+                    TraceId = traceId,
+                    Path = context.Request.Path.Value ?? string.Empty,
+                    Method = context.Request.Method,
+                    ErrorType = exception.GetType().Name,
+                    Message = exception.Message,
+                    StackTrace = exception.StackTrace
+                }, context.RequestAborted);
+            }
+            catch (Exception logException)
+            {
+                _logger.LogWarning(logException,
+                    "Audit log write failed for trace {TraceId}; original request exception preserved.",
+                    traceId);
+            }
 
             throw;
         }
