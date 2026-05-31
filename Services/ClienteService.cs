@@ -15,40 +15,45 @@ public class ClienteService : IClienteService
     public async Task<ClienteDto> CrearAsync(CrearClienteRequest req)
     {
         using var conn = _db.Create();
+        conn.Open(); // keep the same session so LAST_INSERT_ID() works correctly
+
         var existente = await conn.QueryFirstOrDefaultAsync<Cliente>("""
-            SELECT
-                id_usuario AS IdCliente,
-                nombre AS Nombre,
-                '' AS NumeroDocumento,
-                email AS Email,
-                telefono AS Telefono,
-                fecha_registro AS FechaRegistro
-            FROM USUARIO
-            WHERE email = @Email
-               OR (@Telefono IS NOT NULL AND telefono = @Telefono)
-            LIMIT 1
-            """, new { req.Email, req.Telefono });
+                                                                     SELECT
+                                                                         id_usuario AS IdCliente,
+                                                                         nombre AS Nombre,
+                                                                         '' AS NumeroDocumento,
+                                                                         email AS Email,
+                                                                         telefono AS Telefono,
+                                                                         fecha_registro AS FechaRegistro
+                                                                     FROM USUARIO
+                                                                     WHERE email = @Email
+                                                                        OR (@Telefono IS NOT NULL AND telefono = @Telefono)
+                                                                     LIMIT 1
+                                                                     """, new { req.Email, req.Telefono });
 
         if (existente != null)
             return ToDto(existente);
 
         await conn.ExecuteAsync("""
-            INSERT INTO USUARIO (nombre, email, password_hash, telefono, activo, fecha_registro)
-            VALUES (@Nombre, @Email, NULL, @Telefono, 1, UTC_TIMESTAMP())
-            """, new { req.Nombre, req.Email, req.Telefono });
+                                INSERT INTO USUARIO (nombre, email, password_hash, telefono, activo, fecha_registro)
+                                VALUES (@Nombre, @Email, NULL, @Telefono, 1, UTC_TIMESTAMP())
+                                """, new { req.Nombre, req.Email, req.Telefono });
 
         var id = await conn.ExecuteScalarAsync<int>("SELECT LAST_INSERT_ID()");
-        var cliente = await conn.QuerySingleAsync<Cliente>("""
-            SELECT
-                id_usuario AS IdCliente,
-                nombre AS Nombre,
-                '' AS NumeroDocumento,
-                email AS Email,
-                telefono AS Telefono,
-                fecha_registro AS FechaRegistro
-            FROM USUARIO
-            WHERE id_usuario = @id
-            """, new { id });
+
+        var cliente = await conn.QueryFirstOrDefaultAsync<Cliente>("""
+                                                                   SELECT
+                                                                       id_usuario AS IdCliente,
+                                                                       nombre AS Nombre,
+                                                                       '' AS NumeroDocumento,
+                                                                       email AS Email,
+                                                                       telefono AS Telefono,
+                                                                       fecha_registro AS FechaRegistro
+                                                                   FROM USUARIO
+                                                                   WHERE id_usuario = @id
+                                                                   """, new { id })
+                      ?? throw new InvalidOperationException("No se pudo recuperar el cliente recién creado.");
+
         return ToDto(cliente);
     }
 
