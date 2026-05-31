@@ -17,4 +17,14 @@ public class Ticket
     public DateTime FechaEmision { get; set; } = DateTime.UtcNow;
     public DateTime? FechaValidacion { get; set; }
     public int? IdStaffValidacion { get; set; }
+
+    // Propiedades para la vista Print
+    public string? EventName { get; set; }
+    public DateTime EventDate { get; set; }
+    public string? SeatInfo => !string.IsNullOrEmpty(CodigoAsiento) && !string.IsNullOrEmpty(Zona) 
+        ? $"{Zona} - {CodigoAsiento}" 
+        : "N/A";
+    public string Code => CodigoUnico;
+    public string QrCode => QrToken;
+    public decimal Price => PrecioPagado;
 }

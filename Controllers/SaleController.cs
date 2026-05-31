@@ -49,7 +49,6 @@ public class SaleController : Controller
         if (!_session.IsAuthenticated())
             return RedirectToAction("Login", "Auth");
 
-        // Parse selected seats from the hidden JSON field
         if (!string.IsNullOrEmpty(asientosJson))
         {
             model.AsientosSeleccionados = System.Text.Json.JsonSerializer

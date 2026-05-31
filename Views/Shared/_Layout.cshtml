@@ -1,57 +1,60 @@
 ﻿<!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Taquilla</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body>
-    <header class="no-print">
-        <nav class="navbar navbar-expand-sm navbar-dark bg-dark mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-controller="Dashboard" asp-action="Index">🎟 Taquilla</a>
-                <div class="navbar-collapse collapse">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link" asp-controller="Dashboard" asp-action="Index">Events</a>
-                        </li>
-                    </ul>
-                    @if (Context.Session.GetString("employee") != null)
-                    {
-                        <form asp-controller="Auth" asp-action="Logout" method="post" class="d-inline">
-                            <button type="submit" class="btn btn-outline-light btn-sm">Logout</button>
-                        </form>
-                    }
-                </div>
+<div class="app-wrapper">
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <div class="sidebar-logo-icon">🎟</div>
+            <div class="sidebar-logo-text">
+                <strong>Grand Stage</strong>
+                <span>Taquilla</span>
             </div>
-        </nav>
-    </header>
+        </div>
 
-    <div class="container">
+        <nav class="sidebar-nav">
+            <a asp-controller="Dashboard" asp-action="Index"
+               class="@(ViewData["Section"]?.ToString() == "dashboard" ? "active" : "")">
+                <span class="nav-icon">⊞</span> Dashboard
+            </a>
+            <a asp-controller="Sale" asp-action="Create" asp-route-eventoId="0"
+               class="@(ViewData["Section"]?.ToString() == "boxoffice" ? "active" : "")">
+                <span class="nav-icon">🎫</span> Box Office
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            @{
+            var emp = Context.Session.GetString("employee");
+            }
+            @if (emp != null)
+            {
+            <form asp-controller="Auth" asp-action="Logout" method="post">
+                <button type="submit">↩ Sign Out</button>
+            </form>
+            }
+        </div>
+    </aside>
+
+    <main class="main-content">
         @if (TempData["message"] != null)
         {
-            var isSuccess = TempData["success"]?.ToString() == "True";
-            <div class="alert @(isSuccess ? "alert-success" : "alert-danger") alert-dismissible fade show no-print">
-                @TempData["message"]
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
+        var isOk = TempData["success"]?.ToString() == "True";
+        <div class="alert @(isOk ? "alert-success" : "alert-danger") no-print">
+            @TempData["message"]
+        </div>
         }
+        @RenderBody()
+    </main>
+</div>
 
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
-
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    @await RenderSectionAsync("Scripts", required: false)
-
-    <style>
-        @@media print {
-            .no-print { display: none !important; }
-        }
-    </style>
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+@await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

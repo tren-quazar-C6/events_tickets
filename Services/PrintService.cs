@@ -2,7 +2,6 @@ using System.Text;
 using System.Text.Json;
 using events_tickets.Configuration;
 using events_tickets.Models;
-using events_tickets.Responses;
 using Microsoft.Extensions.Options;
 
 namespace events_tickets.Services;
