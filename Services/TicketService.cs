@@ -218,34 +218,44 @@ public class TicketService : ITicketService
     public async Task<byte[]> GenerarPdfAsync(int idTicket)
     {
         var ticket = await ObtenerAsync(idTicket)
-            ?? throw new InvalidOperationException("Ticket no encontrado");
+                     ?? throw new InvalidOperationException("Ticket no encontrado");
 
         QuestPDF.Settings.License = LicenseType.Community;
 
+        // 80mm wide × 200mm tall — standard thermal printer paper
+        var pageSize = new PageSize(80 * 2.835f, 200 * 2.835f); // points
+
         return Document.Create(doc => doc.Page(page =>
         {
-            page.Size(PageSizes.A6.Landscape());
-            page.Margin(20);
+            page.Size(pageSize);
+            page.Margin(8);
             page.Content().Column(col =>
             {
-                col.Item().Text($"Evento #{ticket.IdEvento}").Bold().FontSize(16);
-                col.Item().PaddingTop(6).Row(row =>
+                col.Item().AlignCenter().Text("🎟 TICKIFY").Bold().FontSize(14);
+                col.Item().PaddingTop(4).AlignCenter().Text(ticket.NombreEvento ?? $"Evento #{ticket.IdEvento}").Bold().FontSize(11);
+                col.Item().PaddingTop(2).AlignCenter().Text(ticket.FechaEvento?.ToString("dd/MM/yyyy HH:mm") ?? "").FontSize(9);
+
+                col.Item().PaddingTop(8).LineHorizontal(0.5f);
+
+                col.Item().PaddingTop(6).Text(t =>
                 {
-                    row.RelativeItem().Column(inner =>
-                    {
-                        inner.Item().Text($"Cliente: {ticket.NombreCliente}").FontSize(11);
-                        inner.Item().Text($"Zona: {ticket.Zona}").FontSize(11);
-                        inner.Item().Text($"Asiento: {ticket.CodigoAsiento}").FontSize(14).Bold();
-                        inner.Item().PaddingTop(4).Text($"Código: {ticket.CodigoUnico}").FontSize(9);
-                        inner.Item().Text($"Estado: {ticket.EstadoTicket}").FontSize(8).Italic();
-                        inner.Item().Text($"Precio: ${ticket.PrecioPagado:F2}").FontSize(10);
-                    });
-                    if (!string.IsNullOrEmpty(ticket.QrToken))
-                    {
-                        var qrBytes = Convert.FromBase64String(GenerarQr(ticket.QrToken));
-                        row.ConstantItem(85).Image(qrBytes);
-                    }
+                    t.Line($"Cliente: {ticket.NombreCliente}").FontSize(9);
+                    t.Line($"Zona:    {ticket.Zona}").FontSize(9);
+                    t.Line($"Asiento: {ticket.CodigoAsiento}").Bold().FontSize(11);
+                    t.Line($"Precio:  ${ticket.PrecioPagado:N0}").FontSize(9);
                 });
+
+                col.Item().PaddingTop(6).LineHorizontal(0.5f);
+
+                if (!string.IsNullOrEmpty(ticket.QrToken))
+                {
+                    var qrBytes = Convert.FromBase64String(GenerarQr(ticket.QrToken));
+                    col.Item().PaddingTop(8).AlignCenter().Width(90).Image(qrBytes);
+                }
+
+                col.Item().PaddingTop(4).AlignCenter().Text(ticket.CodigoUnico).FontSize(7).FontColor("#666666");
+                col.Item().PaddingTop(6).LineHorizontal(0.5f);
+                col.Item().PaddingTop(4).AlignCenter().Text("Conserve este ticket para el ingreso").FontSize(7).Italic();
             });
         })).GeneratePdf();
     }

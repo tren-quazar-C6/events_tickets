@@ -37,7 +37,7 @@ public class SaleController : Controller
         {
             EventoId = eventoId,
             Evento = evento,
-            AsientosDisponibles = await _events.GetAvailableSeatsAsync(eventoId)
+            AsientosDisponibles = await _events.GetAllSeatsAsync(eventoId)
         };
 
         return View(model);
@@ -96,7 +96,17 @@ public class SaleController : Controller
     private async Task<IActionResult> ReloadCreate(SaleViewModel model)
     {
         model.Evento = await _events.GetAsync(model.EventoId);
-        model.AsientosDisponibles = await _events.GetAvailableSeatsAsync(model.EventoId);
+        model.AsientosDisponibles = await _events.GetAllSeatsAsync(model.EventoId);
         return View("Create", model);
+    }
+    
+    public async Task<IActionResult> History()
+    {
+        if (!_session.IsAuthenticated())
+            return RedirectToAction("Login", "Auth");
+
+        var ventas = await _ventas.GetAllAsync();
+        ViewData["Section"] = "history";
+        return View(ventas);
     }
 }

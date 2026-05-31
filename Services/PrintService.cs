@@ -31,7 +31,8 @@ public class PrintService : IPrintService
                 documentNumber = numeroDocumento,
                 section = ticket.Zona,
                 seatNumber = ticket.CodigoAsiento,
-                ticketCode = ticket.CodigoUnico
+                ticketCode = ticket.CodigoUnico,
+                qrToken = ticket.QrToken   // ADD THIS
             });
             var content = new StringContent(body, Encoding.UTF8, "application/json");
             var response = await client.PostAsync("/print/ticket", content);

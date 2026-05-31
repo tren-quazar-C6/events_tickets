@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { exec } = require('child_process');
 const fs = require('fs');
+const QRCode = require('qrcode');
 
 const app = express();
 app.use(cors());
@@ -9,11 +10,19 @@ app.use(express.json({ limit: '2mb' }));
 
 const PRINTER = process.env.PRINTER_NAME || 'Printer_USB_Printer_Port';
 
-app.post('/print/ticket', (req, res) => {
+app.post('/print/ticket', async (req, res) => {
     const { eventName, eventDate, venue, customerName, documentNumber,
-        section, seatNumber, ticketCode } = req.body;
+        section, seatNumber, ticketCode, qrToken } = req.body;
 
     const line = '================================';
+
+    let qrAscii = '';
+    if (qrToken) {
+        try {
+            qrAscii = await QRCode.toString(qrToken, { type: 'terminal', small: true });
+        } catch (_) {}
+    }
+
     const content = [
         line,
         center('  ENTRADA / TICKET  '),
@@ -33,6 +42,8 @@ app.post('/print/ticket', (req, res) => {
         center('*** ' + ticketCode + ' ***'),
         line,
         '',
+        qrAscii,
+        '',
         center('Conserve este ticket'),
         center('para el ingreso al evento'),
         '',
@@ -49,7 +60,6 @@ app.post('/print/ticket', (req, res) => {
     });
 });
 
-// Health check
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
 function center(text, width = 32) {

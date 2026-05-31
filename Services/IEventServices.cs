@@ -10,4 +10,6 @@ public interface IEventService
     Task<List<EventoResumen>> GetActiveAsync();
     Task<List<EventoAsiento>> CreateSeatsAsync(int eventId, List<SeatDefinition> seats);
     Task<List<EventoAsiento>> GetAvailableSeatsAsync(int eventId);
+    Task<List<EventoAsiento>> GetAllSeatsAsync(int eventId);
+    
 }

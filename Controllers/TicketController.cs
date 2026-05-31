@@ -32,19 +32,26 @@ public class TicketController : Controller
             return RedirectToAction("Index", "Dashboard");
         }
 
+        // Populate event info on each ticket for the view
         foreach (var ticket in venta.Tickets)
         {
+            ticket.EventName = venta.NombreEvento;
+            ticket.EventDate = venta.FechaEvento ?? venta.FechaVenta;
+
             await _print.ImprimirAsync(new Ticket
-            {
-                IdTicket = ticket.IdTicket,
-                CodigoAsiento = ticket.CodigoAsiento,
-                Zona = ticket.Zona,
-                CodigoUnico = ticket.CodigoUnico
-            }, venta.NombreEvento ?? "", venta.FechaEvento ?? venta.FechaVenta,
+                {
+                    IdTicket = ticket.IdTicket,
+                    CodigoAsiento = ticket.CodigoAsiento,
+                    Zona = ticket.Zona,
+                    CodigoUnico = ticket.CodigoUnico,
+                    QrToken = ticket.QrToken
+                }, venta.NombreEvento ?? "", venta.FechaEvento ?? venta.FechaVenta,
                 venta.NombreCliente ?? "", venta.NumeroDocumentoCliente ?? "");
         }
 
-        ViewBag.EmailSent = await _email.SendTicketsAsync(venta);
+        try { ViewBag.EmailSent = await _email.SendTicketsAsync(venta); }
+        catch { ViewBag.EmailSent = false; }
+
         return View(venta);
     }
 }
