@@ -5,6 +5,7 @@ namespace events_tickets.Services;
 
 public interface IClienteService
 {
+    Task SyncWithLaravelUsersAsync();
     Task<ClienteDto> CrearAsync(CrearClienteRequest req);
     Task<ClienteDto?> ObtenerAsync(int id);
     Task<ClienteDto?> ObtenerPorDocumentoAsync(string numeroDocumento);

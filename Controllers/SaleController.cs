@@ -70,6 +70,12 @@ public class SaleController : Controller
                 model.CustomerEmail,
                 model.CustomerPhone));
 
+            if (!string.IsNullOrWhiteSpace(cliente.PasswordTemporal))
+            {
+                TempData["BuyerAccessEmail"] = cliente.Email;
+                TempData["BuyerAccessPassword"] = cliente.PasswordTemporal;
+            }
+
             var employee = _session.GetEmployee();
             if (employee == null)
                 return RedirectToAction("Login", "Auth");

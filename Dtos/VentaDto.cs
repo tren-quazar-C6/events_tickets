@@ -20,4 +20,6 @@ public class VentaResumenDto
 public class VentaDetalleDto : VentaResumenDto
 {
     public List<TicketResumenDto> Tickets { get; set; } = new();
+    public string? AccessEmail { get; set; }
+    public string? AccessPassword { get; set; }
 }

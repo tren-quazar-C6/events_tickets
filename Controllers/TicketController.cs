@@ -32,6 +32,9 @@ public class TicketController : Controller
             return RedirectToAction("Index", "Dashboard");
         }
 
+        venta.AccessEmail = TempData["BuyerAccessEmail"] as string;
+        venta.AccessPassword = TempData["BuyerAccessPassword"] as string;
+
         // Populate event info on each ticket for the view
         foreach (var ticket in venta.Tickets)
         {
