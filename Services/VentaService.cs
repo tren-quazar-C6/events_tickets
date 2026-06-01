@@ -40,6 +40,7 @@ public class VentaService : IVentaService
             WHERE ea.id_evento_asiento IN @ids
               AND ea.id_evento = @idEvento
               AND ea.estado = 'DISPONIBLE'
+              AND t.id_ticket IS NULL
             FOR UPDATE
             """, new { ids = req.IdEventoAsientos, idEvento = req.IdEvento }, tx)).ToList();
 
@@ -208,18 +209,18 @@ public class VentaService : IVentaService
              """);
         return rows.Select(v => new VentaResumenDto
         {
-            IdVenta = v.id_venta,
-            IdEvento = v.id_evento ?? 0,
+            IdVenta = (int)v.id_venta,
+            IdEvento = v.id_evento == null ? 0 : (int)v.id_evento,
             NombreEvento = v.nombre_evento,
             FechaEvento = v.fecha_evento,
-            IdCliente = v.id_usuario,
+            IdCliente = (int)v.id_usuario,
             NombreCliente = v.nombre_cliente,
             EmailCliente = v.email_cliente,
-            IdStaff = v.id_staff,
-            Total = v.total,
-            Estado = v.estado_pago,
-            FechaVenta = v.fecha_venta,
-            CantidadTickets = (int)v.cantidad_tickets
+            IdStaff = v.id_staff == null ? 0 : (int)v.id_staff,
+            Total = (decimal)v.total,
+            Estado = v.estado_pago ?? "",
+            FechaVenta = (DateTime)v.fecha_venta,
+            CantidadTickets = (int)(long)v.cantidad_tickets
         }).ToList();
     }
 

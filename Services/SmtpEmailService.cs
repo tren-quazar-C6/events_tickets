@@ -1,58 +1,83 @@
-using System.Net;
-using System.Net.Mail;
-using events_tickets.Configuration;
 using events_tickets.Dtos;
-using Microsoft.Extensions.Options;
+using MailKit.Net.Smtp;
+using MailKit.Security;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using MimeKit;
 
 namespace events_tickets.Services;
 
 public class SmtpEmailService : IEmailService
 {
-    private readonly EmailOptions _options;
+    private readonly IConfiguration _config;
     private readonly ITicketService _tickets;
+    private readonly ILogger<SmtpEmailService> _logger;
 
-    public SmtpEmailService(IOptions<EmailOptions> options, ITicketService tickets)
+    public SmtpEmailService(
+        IConfiguration config,
+        ITicketService tickets,
+        ILogger<SmtpEmailService> logger)
     {
-        _options = options.Value;
+        _config = config;
         _tickets = tickets;
+        _logger = logger;
     }
 
     public async Task<bool> SendTicketsAsync(VentaDetalleDto venta)
     {
-        if (!_options.IsConfigured || string.IsNullOrWhiteSpace(venta.EmailCliente))
+        var smtpHost = _config["Email:SmtpHost"] ?? _config["Email:Host"] ?? "smtp.gmail.com";
+        var smtpPort = int.TryParse(_config["Email:SmtpPort"] ?? _config["Email:Port"], out var p) ? p : 587;
+        var smtpUser = _config["Email:User"] ?? _config["Email:Username"] ?? "";
+        var smtpPass = (_config["Email:Password"] ?? string.Empty).Replace(" ", string.Empty);
+        var enableSsl = bool.TryParse(_config["Email:EnableSsl"], out var ssl) ? ssl : true;
+
+        if (string.IsNullOrWhiteSpace(venta.EmailCliente) ||
+            string.IsNullOrWhiteSpace(smtpUser) ||
+            string.IsNullOrWhiteSpace(smtpPass))
+        {
+            _logger.LogWarning("Email skipped. Recipient={Recipient}, UserConfigured={UserConfigured}, PassConfigured={PassConfigured}",
+                venta.EmailCliente,
+                !string.IsNullOrWhiteSpace(smtpUser),
+                !string.IsNullOrWhiteSpace(smtpPass));
             return false;
-
-        using var message = new MailMessage
-        {
-            From = new MailAddress(_options.FromAddress, _options.FromName),
-            Subject = $"Tickets - {venta.NombreEvento}",
-            Body = $"Hola {venta.NombreCliente}, adjuntamos tus tickets para {venta.NombreEvento}.",
-            IsBodyHtml = false
-        };
-        message.To.Add(venta.EmailCliente);
-
-        foreach (var ticket in venta.Tickets)
-        {
-            var pdf = await _tickets.GenerarPdfAsync(ticket.IdTicket);
-            var stream = new MemoryStream(pdf);
-            message.Attachments.Add(new Attachment(stream, $"ticket-{ticket.IdTicket}.pdf", "application/pdf"));
         }
 
-        using var client = new SmtpClient(_options.Host, _options.Port)
+        try
         {
-            EnableSsl = _options.EnableSsl
-        };
+            var message = new MimeMessage();
+            message.From.Add(MailboxAddress.Parse(smtpUser));
+            message.To.Add(MailboxAddress.Parse(venta.EmailCliente));
+            message.Subject = $"Tickets - {venta.NombreEvento}";
 
-        if (!string.IsNullOrWhiteSpace(_options.Username))
-            client.Credentials = new NetworkCredential(_options.Username, _options.Password);
-    
-        Console.WriteLine($"Host: {_options.Host}");
-        Console.WriteLine($"Port: {_options.Port}");
-        Console.WriteLine($"User: {_options.Username}");
-        Console.WriteLine($"SSL: {_options.EnableSsl}");
-        Console.WriteLine($"Configured: {_options.IsConfigured}");
-        
-        await client.SendMailAsync(message);
-        return true;
+            var builder = new BodyBuilder
+            {
+                TextBody = $"Hola {venta.NombreCliente}, adjuntamos tus tickets para {venta.NombreEvento}."
+            };
+
+            foreach (var ticket in venta.Tickets)
+            {
+                var pdf = await _tickets.GenerarPdfAsync(ticket.IdTicket);
+                builder.Attachments.Add($"ticket-{ticket.IdTicket}.pdf", pdf, ContentType.Parse("application/pdf"));
+            }
+
+            message.Body = builder.ToMessageBody();
+
+            using var client = new SmtpClient();
+            var socketOption = enableSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.None;
+            await client.ConnectAsync(smtpHost, smtpPort, socketOption);
+            await client.AuthenticateAsync(smtpUser, smtpPass);
+            await client.SendAsync(message);
+            await client.DisconnectAsync(true);
+
+            _logger.LogInformation("Tickets email sent to {Recipient} for venta {VentaId}",
+                venta.EmailCliente, venta.IdVenta);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Tickets email failed for venta {VentaId} to {Recipient}",
+                venta.IdVenta, venta.EmailCliente);
+            return false;
+        }
     }
 }
