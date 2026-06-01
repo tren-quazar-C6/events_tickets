@@ -483,3 +483,7 @@ $RECYCLE.BIN/
 
 # Studio documentation (local learning only)
 docsStudio/
+
+# Claude Code project instructions (local only)
+CLAUDE.md
+.claude/
