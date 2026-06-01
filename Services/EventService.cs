@@ -25,15 +25,22 @@ public class EventService : IEventService
                 e.capacidad_total AS CapacidadTotal,
                 te.nombre_tipo AS TipoEvento,
                 NULL AS ImagenPrincipal,
-                SUM(CASE WHEN ea.estado = 'DISPONIBLE' THEN 1 ELSE 0 END) AS AsientosDisponibles,
-                MIN(ez.precio) AS PrecioDesde
+                (
+                    SELECT COUNT(*)
+                    FROM EVENTO_ASIENTO ea
+                    WHERE ea.id_evento = e.id_evento
+                      AND ea.estado = 'DISPONIBLE'
+                ) AS AsientosDisponibles,
+                (
+                    SELECT MIN(ez.precio)
+                    FROM EVENTO_ZONA ez
+                    WHERE ez.id_evento = e.id_evento
+                      AND COALESCE(ez.activo, 1) = 1
+                ) AS PrecioDesde
             FROM EVENTOS e
             LEFT JOIN TIPO_EVENTO te ON te.id_tipo_evento = e.id_tipo_evento
-            LEFT JOIN EVENTO_ZONA ez ON ez.id_evento = e.id_evento
-            LEFT JOIN EVENTO_ASIENTO ea ON ea.id_evento = e.id_evento
             WHERE COALESCE(e.activo, 1) = 1
               AND COALESCE(e.publicado, 1) = 1
-            GROUP BY e.id_evento
             ORDER BY e.fecha_evento
             """);
 
@@ -54,16 +61,33 @@ public class EventService : IEventService
                 e.capacidad_total AS CapacidadTotal,
                 te.nombre_tipo AS TipoEvento,
                 NULL AS ImagenPrincipal,
-                SUM(CASE WHEN ea.estado = 'DISPONIBLE' THEN 1 ELSE 0 END) AS AsientosDisponibles,
-                SUM(CASE WHEN ea.estado = 'RESERVADO' THEN 1 ELSE 0 END) AS AsientosReservados,
-                SUM(CASE WHEN ea.estado = 'VENDIDO' THEN 1 ELSE 0 END) AS AsientosVendidos,
-                MIN(ez.precio) AS PrecioDesde
+                (
+                    SELECT COUNT(*)
+                    FROM EVENTO_ASIENTO ea
+                    WHERE ea.id_evento = e.id_evento
+                      AND ea.estado = 'DISPONIBLE'
+                ) AS AsientosDisponibles,
+                (
+                    SELECT COUNT(*)
+                    FROM EVENTO_ASIENTO ea
+                    WHERE ea.id_evento = e.id_evento
+                      AND ea.estado = 'RESERVADO'
+                ) AS AsientosReservados,
+                (
+                    SELECT COUNT(*)
+                    FROM EVENTO_ASIENTO ea
+                    WHERE ea.id_evento = e.id_evento
+                      AND ea.estado = 'VENDIDO'
+                ) AS AsientosVendidos,
+                (
+                    SELECT MIN(ez.precio)
+                    FROM EVENTO_ZONA ez
+                    WHERE ez.id_evento = e.id_evento
+                      AND COALESCE(ez.activo, 1) = 1
+                ) AS PrecioDesde
             FROM EVENTOS e
             LEFT JOIN TIPO_EVENTO te ON te.id_tipo_evento = e.id_tipo_evento
-            LEFT JOIN EVENTO_ZONA ez ON ez.id_evento = e.id_evento
-            LEFT JOIN EVENTO_ASIENTO ea ON ea.id_evento = e.id_evento
             WHERE e.id_evento = @id
-            GROUP BY e.id_evento
             """, new { id });
 
         return evento;

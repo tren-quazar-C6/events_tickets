@@ -18,23 +18,7 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
-// Named HttpClients — this is what was likely missing
-var apiUrl = builder.Configuration["ApiSettings:BaseUrl"];
-if (string.IsNullOrEmpty(apiUrl))
-    throw new Exception("ApiSettings:BaseUrl is missing from appsettings.json");
-
-builder.Services.AddHttpClient("api", client =>
-{
-    client.BaseAddress = new Uri(apiUrl);
-    client.Timeout = TimeSpan.FromSeconds(30);
-});
-
-builder.Services.AddHttpClient("print", client =>
-{
-    client.BaseAddress = new Uri(
-        builder.Configuration["PrintSettings:BaseUrl"] ?? "http://localhost:9100");
-    client.Timeout = TimeSpan.FromSeconds(10);
-});
+builder.Services.AddHttpClient();
 
 // App services
 builder.Services.AddHttpContextAccessor();
@@ -56,7 +40,6 @@ builder.Services.Configure<EmailOptions>(opt =>
 });
 
 builder.Services.AddScoped<SessionService>();
-builder.Services.AddScoped<ApiService>();
 builder.Services.AddScoped<IClienteService, ClienteService>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IEventService, EventService>();
@@ -64,7 +47,6 @@ builder.Services.AddScoped<ITicketService, TicketService>();
 builder.Services.AddScoped<IVentaService, VentaService>();
 builder.Services.AddScoped<IPrintService, PrintService>();
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
-builder.Services.AddScoped<EmailService>();
 
 // MongoDB audit logging
 builder.Services.Configure<MongoLoggingOptions>(

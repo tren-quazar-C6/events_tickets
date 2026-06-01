@@ -64,12 +64,11 @@ public class SaleController : Controller
 
         try
         {
-            var cliente = await _clientes.ObtenerPorDocumentoAsync(model.CustomerDocument)
-                ?? await _clientes.CrearAsync(new CrearClienteRequest(
-                    model.CustomerName,
-                    model.CustomerDocument,
-                    model.CustomerEmail,
-                    model.CustomerPhone));
+            var cliente = await _clientes.ObtenerOCrearActualizarAsync(new CrearClienteRequest(
+                model.CustomerName,
+                model.CustomerDocument,
+                model.CustomerEmail,
+                model.CustomerPhone));
 
             var employee = _session.GetEmployee();
             if (employee == null)

@@ -57,6 +57,101 @@ public class ClienteService : IClienteService
         return ToDto(cliente);
     }
 
+    public async Task<ClienteDto> ObtenerOCrearActualizarAsync(CrearClienteRequest req)
+    {
+        using var conn = _db.Create();
+        conn.Open();
+
+        var byEmail = await conn.QueryFirstOrDefaultAsync<Cliente>("""
+            SELECT
+                id_usuario AS IdCliente,
+                nombre AS Nombre,
+                '' AS NumeroDocumento,
+                email AS Email,
+                telefono AS Telefono,
+                fecha_registro AS FechaRegistro
+            FROM USUARIO
+            WHERE email = @Email
+            LIMIT 1
+            """, new { req.Email });
+
+        // If email already exists, always use that same user.
+        if (byEmail != null)
+        {
+            await conn.ExecuteAsync("""
+                UPDATE USUARIO
+                SET nombre = @Nombre,
+                    telefono = @Telefono
+                WHERE id_usuario = @Id
+                """, new
+            {
+                req.Nombre,
+                req.Telefono,
+                Id = byEmail.IdCliente
+            });
+
+            var updatedByEmail = await conn.QueryFirstOrDefaultAsync<Cliente>("""
+                SELECT
+                    id_usuario AS IdCliente,
+                    nombre AS Nombre,
+                    '' AS NumeroDocumento,
+                    email AS Email,
+                    telefono AS Telefono,
+                    fecha_registro AS FechaRegistro
+                FROM USUARIO
+                WHERE id_usuario = @id
+                """, new { id = byEmail.IdCliente })
+                ?? throw new InvalidOperationException("No se pudo recuperar el cliente actualizado.");
+
+            return ToDto(updatedByEmail);
+        }
+
+        var byPhone = await conn.QueryFirstOrDefaultAsync<Cliente>("""
+            SELECT
+                id_usuario AS IdCliente,
+                nombre AS Nombre,
+                '' AS NumeroDocumento,
+                email AS Email,
+                telefono AS Telefono,
+                fecha_registro AS FechaRegistro
+            FROM USUARIO
+            WHERE @Telefono IS NOT NULL AND telefono = @Telefono
+            LIMIT 1
+            """, new { req.Telefono });
+
+        if (byPhone == null)
+            return await CrearAsync(req);
+
+        await conn.ExecuteAsync("""
+            UPDATE USUARIO
+            SET nombre = @Nombre,
+                email = @Email,
+                telefono = @Telefono
+            WHERE id_usuario = @Id
+            """, new
+        {
+            req.Nombre,
+            req.Email,
+            req.Telefono,
+            Id = byPhone.IdCliente
+        });
+
+        var actualizado = await conn.QueryFirstOrDefaultAsync<Cliente>("""
+            SELECT
+                id_usuario AS IdCliente,
+                nombre AS Nombre,
+                '' AS NumeroDocumento,
+                email AS Email,
+                telefono AS Telefono,
+                fecha_registro AS FechaRegistro
+            FROM USUARIO
+            WHERE id_usuario = @id
+            """, new { id = byPhone.IdCliente })
+            ?? throw new InvalidOperationException("No se pudo recuperar el cliente actualizado.");
+
+        return ToDto(actualizado);
+    }
+
     public async Task<ClienteDto?> ObtenerAsync(int id)
     {
         using var conn = _db.Create();

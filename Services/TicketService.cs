@@ -216,49 +216,80 @@ public class TicketService : ITicketService
     }
 
     public async Task<byte[]> GenerarPdfAsync(int idTicket)
+{
+    var ticket = await ObtenerAsync(idTicket)
+        ?? throw new InvalidOperationException("Ticket no encontrado");
+
+    QuestPDF.Settings.License = LicenseType.Community;
+
+    // 80mm × 200mm — standard thermal receipt paper, portrait
+    var pageSize = new PageSize(
+        (float)(80 * 2.8346),   // 226.77 pt
+        (float)(200 * 2.8346)   // 566.93 pt
+    );
+
+    return Document.Create(doc => doc.Page(page =>
     {
-        var ticket = await ObtenerAsync(idTicket)
-                     ?? throw new InvalidOperationException("Ticket no encontrado");
-
-        QuestPDF.Settings.License = LicenseType.Community;
-
-        // 80mm wide × 200mm tall — standard thermal printer paper
-        var pageSize = new PageSize(80 * 2.835f, 200 * 2.835f); // points
-
-        return Document.Create(doc => doc.Page(page =>
+        page.Size(pageSize);
+        page.Margin(10);
+        page.Content().Column(col =>
         {
-            page.Size(pageSize);
-            page.Margin(8);
-            page.Content().Column(col =>
+            // Header
+            col.Item().AlignCenter().Text("TICKIFY")
+                .Bold().FontSize(16).LetterSpacing(3);
+
+            col.Item().PaddingTop(4).AlignCenter()
+                .Text(ticket.NombreEvento ?? $"Evento #{ticket.IdEvento}")
+                .Bold().FontSize(10);
+
+            if (ticket.FechaEvento.HasValue)
+                col.Item().AlignCenter()
+                    .Text(ticket.FechaEvento.Value.ToString("dd/MM/yyyy  HH:mm"))
+                    .FontSize(8).FontColor("#555555");
+
+            col.Item().PaddingTop(8).LineHorizontal(0.5f).LineColor("#cccccc");
+
+            // Seat info — prominent
+            col.Item().PaddingTop(8).AlignCenter()
+                .Text(ticket.CodigoAsiento ?? "")
+                .Bold().FontSize(20);
+
+            col.Item().AlignCenter()
+                .Text((ticket.Zona ?? "").ToUpper())
+                .FontSize(9).FontColor("#666666");
+
+            col.Item().PaddingTop(6).LineHorizontal(0.5f).LineColor("#cccccc");
+
+            // Customer
+            col.Item().PaddingTop(8).Column(inner =>
             {
-                col.Item().AlignCenter().Text("🎟 TICKIFY").Bold().FontSize(14);
-                col.Item().PaddingTop(4).AlignCenter().Text(ticket.NombreEvento ?? $"Evento #{ticket.IdEvento}").Bold().FontSize(11);
-                col.Item().PaddingTop(2).AlignCenter().Text(ticket.FechaEvento?.ToString("dd/MM/yyyy HH:mm") ?? "").FontSize(9);
-
-                col.Item().PaddingTop(8).LineHorizontal(0.5f);
-
-                col.Item().PaddingTop(6).Text(t =>
-                {
-                    t.Line($"Cliente: {ticket.NombreCliente}").FontSize(9);
-                    t.Line($"Zona:    {ticket.Zona}").FontSize(9);
-                    t.Line($"Asiento: {ticket.CodigoAsiento}").Bold().FontSize(11);
-                    t.Line($"Precio:  ${ticket.PrecioPagado:N0}").FontSize(9);
-                });
-
-                col.Item().PaddingTop(6).LineHorizontal(0.5f);
-
-                if (!string.IsNullOrEmpty(ticket.QrToken))
-                {
-                    var qrBytes = Convert.FromBase64String(GenerarQr(ticket.QrToken));
-                    col.Item().PaddingTop(8).AlignCenter().Width(90).Image(qrBytes);
-                }
-
-                col.Item().PaddingTop(4).AlignCenter().Text(ticket.CodigoUnico).FontSize(7).FontColor("#666666");
-                col.Item().PaddingTop(6).LineHorizontal(0.5f);
-                col.Item().PaddingTop(4).AlignCenter().Text("Conserve este ticket para el ingreso").FontSize(7).Italic();
+                inner.Item().Text($"Cliente:  {ticket.NombreCliente}").FontSize(8);
+                inner.Item().PaddingTop(2).Text($"Precio:   ${ticket.PrecioPagado:N0}").FontSize(8);
+                inner.Item().PaddingTop(2).Text($"Estado:   {ticket.EstadoTicket}").FontSize(8);
             });
-        })).GeneratePdf();
-    }
+
+            col.Item().PaddingTop(8).LineHorizontal(0.5f).LineColor("#cccccc");
+
+            // QR code centered
+            if (!string.IsNullOrEmpty(ticket.QrToken))
+            {
+                var qrBytes = Convert.FromBase64String(GenerarQr(ticket.QrToken));
+                col.Item().PaddingTop(10).AlignCenter().Width(100).Image(qrBytes);
+            }
+
+            // Ticket code below QR
+            col.Item().PaddingTop(6).AlignCenter()
+                .Text(ticket.CodigoUnico)
+                .FontSize(6).FontColor("#888888");
+
+            col.Item().PaddingTop(8).LineHorizontal(0.5f).LineColor("#cccccc");
+
+            col.Item().PaddingTop(6).AlignCenter()
+                .Text("Conserve este ticket para el ingreso")
+                .FontSize(7).Italic().FontColor("#666666");
+        });
+    })).GeneratePdf();
+}
 
     private static string GenerarQr(string contenido)
     {

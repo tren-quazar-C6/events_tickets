@@ -8,5 +8,6 @@ public interface IClienteService
     Task<ClienteDto> CrearAsync(CrearClienteRequest req);
     Task<ClienteDto?> ObtenerAsync(int id);
     Task<ClienteDto?> ObtenerPorDocumentoAsync(string numeroDocumento);
+    Task<ClienteDto> ObtenerOCrearActualizarAsync(CrearClienteRequest req);
     Task<List<ClienteDto>> ListarAsync();
 }
