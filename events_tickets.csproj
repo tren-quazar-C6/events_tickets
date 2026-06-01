@@ -17,4 +17,9 @@
 <PackageReference Include="MailKit" Version="4.8.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <_ContentIncludedByDefault Remove="print-server\package-lock.json" />
+    <_ContentIncludedByDefault Remove="print-server\package.json" />
+  </ItemGroup>
+
 </Project>
