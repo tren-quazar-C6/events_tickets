@@ -21,6 +21,14 @@
         Tickets enviados a <strong>@Model.EmailCliente</strong>. Se están imprimiendo ahora.
     </div>
 }
+
+@if (!string.IsNullOrWhiteSpace(Model.AccessPassword))
+{
+    <div class="alert alert-info no-print">
+        Acceso App Butaca: <strong>@Model.AccessEmail</strong><br />
+        Contraseña temporal: <strong>@Model.AccessPassword</strong>
+    </div>
+}
 else
 {
     <div class="alert alert-warning no-print">

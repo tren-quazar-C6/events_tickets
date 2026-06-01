@@ -60,6 +60,20 @@ builder.Services.AddSingleton<IAuditLogService, MongoAuditLogService>();
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var clientes = scope.ServiceProvider.GetRequiredService<IClienteService>();
+        await clientes.SyncWithLaravelUsersAsync();
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("StartupSync");
+        logger.LogWarning(ex, "No se pudo sincronizar USUARIO <-> users en el arranque.");
+    }
+}
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");

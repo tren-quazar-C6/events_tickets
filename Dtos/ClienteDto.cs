@@ -8,4 +8,6 @@ public class ClienteDto
     public string? Email { get; set; }
     public string? Telefono { get; set; }
     public DateTime FechaRegistro { get; set; }
+    public bool CuentaCreada { get; set; }
+    public string? PasswordTemporal { get; set; }
 }

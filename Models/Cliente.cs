@@ -7,5 +7,6 @@ public class Cliente
     public string NumeroDocumento { get; set; } = "";
     public string? Email { get; set; }
     public string? Telefono { get; set; }
+    public string? PasswordHash { get; set; }
     public DateTime FechaRegistro { get; set; } = DateTime.UtcNow;
 }
