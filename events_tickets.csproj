@@ -16,4 +16,9 @@
     <PackageReference Include="QuestPDF" Version="2025.1.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <_ContentIncludedByDefault Remove="print-server\package-lock.json" />
+    <_ContentIncludedByDefault Remove="print-server\package.json" />
+  </ItemGroup>
+
 </Project>
