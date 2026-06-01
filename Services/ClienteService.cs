@@ -351,7 +351,9 @@ public class ClienteService : IClienteService
                 var bcryptKnown = BCrypt.Net.BCrypt.HashPassword(knownPlainPassword);
                 await conn.ExecuteAsync("""
                     UPDATE users
-                    SET name = @Name, password = @Password, updated_at = UTC_TIMESTAMP()
+                    SET name = @Name, password = @Password,
+                        email_verified_at = COALESCE(email_verified_at, UTC_TIMESTAMP()),
+                        updated_at = UTC_TIMESTAMP()
                     WHERE email = @Email
                     """, new { Name = cliente.Nombre, Password = bcryptKnown, Email = cliente.Email });
             }
@@ -359,7 +361,9 @@ public class ClienteService : IClienteService
             {
                 await conn.ExecuteAsync("""
                     UPDATE users
-                    SET name = @Name, updated_at = UTC_TIMESTAMP()
+                    SET name = @Name,
+                        email_verified_at = COALESCE(email_verified_at, UTC_TIMESTAMP()),
+                        updated_at = UTC_TIMESTAMP()
                     WHERE email = @Email
                     """, new { Name = cliente.Nombre, Email = cliente.Email });
             }
