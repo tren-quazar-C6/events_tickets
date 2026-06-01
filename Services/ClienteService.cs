@@ -370,8 +370,8 @@ public class ClienteService : IClienteService
         var bcrypt = BCrypt.Net.BCrypt.HashPassword(plainPassword);
 
         await conn.ExecuteAsync("""
-            INSERT INTO users (name, email, password, created_at, updated_at)
-            VALUES (@Name, @Email, @Password, UTC_TIMESTAMP(), UTC_TIMESTAMP())
+            INSERT INTO users (name, email, password, email_verified_at, created_at, updated_at)
+            VALUES (@Name, @Email, @Password, UTC_TIMESTAMP(), UTC_TIMESTAMP(), UTC_TIMESTAMP())
             """, new
         {
             Name = cliente.Nombre,
