@@ -40,8 +40,35 @@ public class TicketController : Controller
         {
             ticket.EventName = venta.NombreEvento;
             ticket.EventDate = venta.FechaEvento ?? venta.FechaVenta;
+        }
 
-            await _print.ImprimirAsync(new Ticket
+        try { ViewBag.EmailSent = await _email.SendTicketsAsync(venta); }
+        catch { ViewBag.EmailSent = false; }
+
+        if (TempData["PrintStatus"] is string printStatus)
+            ViewBag.PrintStatus = printStatus;
+
+        return View(venta);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Reprint(int ventaId)
+    {
+        if (!_session.IsAuthenticated())
+            return RedirectToAction("Login", "Auth");
+
+        var venta = await _ventas.ObtenerAsync(ventaId);
+        if (venta == null)
+        {
+            TempData["message"] = "Sale not found";
+            TempData["success"] = "False";
+            return RedirectToAction("Index", "Dashboard");
+        }
+
+        var ok = true;
+        foreach (var ticket in venta.Tickets)
+        {
+            var printed = await _print.ImprimirAsync(new Ticket
                 {
                     IdTicket = ticket.IdTicket,
                     CodigoAsiento = ticket.CodigoAsiento,
@@ -50,11 +77,14 @@ public class TicketController : Controller
                     QrToken = ticket.QrToken
                 }, venta.NombreEvento ?? "", venta.FechaEvento ?? venta.FechaVenta,
                 venta.NombreCliente ?? "", venta.NumeroDocumentoCliente ?? "");
+
+            if (!printed) ok = false;
         }
 
-        try { ViewBag.EmailSent = await _email.SendTicketsAsync(venta); }
-        catch { ViewBag.EmailSent = false; }
+        TempData["PrintStatus"] = ok
+            ? "Reimpresión enviada a la impresora térmica."
+            : "No se pudo completar la reimpresión en la impresora térmica.";
 
-        return View(venta);
+        return RedirectToAction(nameof(Print), new { ventaId });
     }
 }

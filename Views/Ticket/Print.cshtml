@@ -11,7 +11,10 @@
     </div>
     <div class="d-flex gap-2">
         <a asp-controller="Dashboard" asp-action="Index" class="btn btn-outline">← Dashboard</a>
-        <button onclick="window.print()" class="btn btn-accent">🖨 Reimprimir</button>
+        <form asp-controller="Ticket" asp-action="Reprint" asp-route-ventaId="@Model.IdVenta" method="post" style="display:inline;">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-accent">🖨 Reimprimir</button>
+        </form>
     </div>
 </div>
 
@@ -37,6 +40,11 @@ else
     </div>
 }
 
+@* @if (ViewBag.PrintStatus is string printStatus && !string.IsNullOrWhiteSpace(printStatus)) *@
+@* { *@
+@*     <div class="alert alert-info no-print">@printStatus</div> *@
+@* } *@
+
 @foreach (var ticket in Model.Tickets)
 {
     <div class="ticket-card">
@@ -61,12 +69,6 @@ else
             <div class="ticket-price">$@ticket.Price.ToString("N0")</div>
         </div>
     </div>
-}
-
-@section Scripts {
-    <script>
-    window.addEventListener('load', function () { window.print(); });
-</script>
 }
 
 <style>

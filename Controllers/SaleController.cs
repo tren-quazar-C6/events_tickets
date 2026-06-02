@@ -11,13 +11,15 @@ public class SaleController : Controller
     private readonly IEventService _events;
     private readonly IVentaService _ventas;
     private readonly SessionService _session;
+    private readonly IPrintService _print;
 
-    public SaleController(IClienteService clientes, IEventService events, IVentaService ventas, SessionService session)
+    public SaleController(IClienteService clientes, IEventService events, IVentaService ventas, SessionService session, IPrintService print)
     {
         _clientes = clientes;
         _events = events;
         _ventas = ventas;
         _session = session;
+        _print = print;
     }
 
     public async Task<IActionResult> Create(int eventoId)
@@ -85,6 +87,30 @@ public class SaleController : Controller
                 cliente.IdCliente,
                 employee.IdStaff,
                 model.AsientosSeleccionados));
+
+            var ventaCompleta = await _ventas.ObtenerAsync(venta.IdVenta);
+            var printed = true;
+            if (ventaCompleta != null)
+            {
+                foreach (var ticket in ventaCompleta.Tickets)
+                {
+                    var ok = await _print.ImprimirAsync(new Ticket
+                        {
+                            IdTicket = ticket.IdTicket,
+                            CodigoAsiento = ticket.CodigoAsiento,
+                            Zona = ticket.Zona,
+                            CodigoUnico = ticket.CodigoUnico,
+                            QrToken = ticket.QrToken
+                        }, ventaCompleta.NombreEvento ?? "", ventaCompleta.FechaEvento ?? ventaCompleta.FechaVenta,
+                        ventaCompleta.NombreCliente ?? "", ventaCompleta.NumeroDocumentoCliente ?? "");
+
+                    if (!ok) printed = false;
+                }
+            }
+
+            TempData["PrintStatus"] = printed
+                ? "Impresión enviada a la impresora térmica."
+                : "La venta se creó, pero no se pudo imprimir en la impresora térmica.";
 
             TempData["message"] = "Sale completed successfully";
             TempData["success"] = "True";
