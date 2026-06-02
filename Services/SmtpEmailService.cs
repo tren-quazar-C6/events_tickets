@@ -49,16 +49,15 @@ public class SmtpEmailService : IEmailService
             message.To.Add(MailboxAddress.Parse(venta.EmailCliente));
             message.Subject = $"Tickets - {venta.NombreEvento}";
             const string appButacaUrl = "https://quasar.andrescortes.dev/";
-
             var accessBlock = string.IsNullOrWhiteSpace(venta.AccessPassword)
                 ? """
                   <p style="margin:18px 0 0;color:#475569;font-size:14px;line-height:1.5">
-                    Ya tienes una cuenta registrada. Puedes entrar al módulo de usuarios con tu correo para revisar tus tickets.
+                    Ya tienes una cuenta registrada. Puedes entrar a la App Butaca con tu correo.
                   </p>
                   """
                 : $"""
                    <div style="margin-top:18px;padding:14px;border:1px solid #cbd5e1;border-radius:10px;background:#f8fafc">
-                     <div style="font-size:14px;color:#0f172a;font-weight:700;margin-bottom:8px">Acceso al módulo de usuarios</div>
+                     <div style="font-size:14px;color:#0f172a;font-weight:700;margin-bottom:8px">Acceso a la App Butaca</div>
                      <div style="font-size:14px;color:#334155;line-height:1.6">
                        Correo: <strong>{System.Net.WebUtility.HtmlEncode(venta.AccessEmail ?? venta.EmailCliente)}</strong><br/>
                        Contraseña temporal: <strong>{System.Net.WebUtility.HtmlEncode(venta.AccessPassword)}</strong>
@@ -70,7 +69,7 @@ public class SmtpEmailService : IEmailService
             {
                 TextBody = $"Hola {venta.NombreCliente}, adjuntamos tus tickets para {venta.NombreEvento}."
                     + (string.IsNullOrWhiteSpace(venta.AccessPassword)
-                        ? "\n\nYa tienes una cuenta registrada. Puedes entrar al link de la app con tu correo para revisar tus tickets."
+                        ? "\n\nYa tienes una cuenta registrada. Puedes entrar a la App Butaca con tu correo."
                         : $"\n\nAcceso a la App Butaca\nCorreo: {venta.AccessEmail ?? venta.EmailCliente}\nContraseña temporal: {venta.AccessPassword}")
                     + $"\n\nAbrir App Butaca: {appButacaUrl}",
                 HtmlBody = $"""

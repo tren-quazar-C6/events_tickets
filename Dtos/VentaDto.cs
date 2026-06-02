@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace events_tickets.Dtos;
 
 public class VentaResumenDto
@@ -20,6 +22,8 @@ public class VentaResumenDto
 public class VentaDetalleDto : VentaResumenDto
 {
     public List<TicketResumenDto> Tickets { get; set; } = new();
+    [JsonIgnore]
     public string? AccessEmail { get; set; }
+    [JsonIgnore]
     public string? AccessPassword { get; set; }
 }

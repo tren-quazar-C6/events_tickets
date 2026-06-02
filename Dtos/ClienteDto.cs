@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace events_tickets.Dtos;
 
 public class ClienteDto
@@ -9,5 +11,6 @@ public class ClienteDto
     public string? Telefono { get; set; }
     public DateTime FechaRegistro { get; set; }
     public bool CuentaCreada { get; set; }
+    [JsonIgnore]
     public string? PasswordTemporal { get; set; }
 }

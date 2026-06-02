@@ -94,10 +94,16 @@ public class ClienteService : IClienteService
                                                                      WHERE email = @Email
                                                                         OR (@Telefono IS NOT NULL AND telefono = @Telefono)
                                                                      LIMIT 1
-                                                                     """, new { req.Email, req.Telefono });
+        """, new { req.Email, req.Telefono });
 
         if (existente != null)
-            return ToDto(existente);
+        {
+            var dtoExistente = ToDto(existente);
+            var linkedExistente = await EnsureLinkedLaravelUserAsync(conn, existente);
+            dtoExistente.CuentaCreada = linkedExistente.Created;
+            dtoExistente.PasswordTemporal = linkedExistente.PasswordTemporal;
+            return dtoExistente;
+        }
 
         var tempPassword = GenerateTemporaryPassword();
         await conn.ExecuteAsync("""
@@ -128,9 +134,9 @@ public class ClienteService : IClienteService
                       ?? throw new InvalidOperationException("No se pudo recuperar el cliente recién creado.");
 
         var dto = ToDto(cliente);
-        dto.CuentaCreada = true;
-        dto.PasswordTemporal = tempPassword;
-        dto.PasswordTemporal = (await EnsureLinkedLaravelUserAsync(conn, cliente, dto.PasswordTemporal)).PasswordTemporal;
+        var linked = await EnsureLinkedLaravelUserAsync(conn, cliente, tempPassword);
+        dto.CuentaCreada = linked.Created;
+        dto.PasswordTemporal = linked.PasswordTemporal;
         return dto;
     }
 
@@ -153,21 +159,18 @@ public class ClienteService : IClienteService
             LIMIT 1
             """, new { req.Email });
 
-        // If email already exists, always use that same user and refresh temporary access password.
+        // If the customer already exists, keep the stored password untouched.
         if (byEmail != null)
         {
-            var tempPassword = GenerateTemporaryPassword();
             await conn.ExecuteAsync("""
                 UPDATE USUARIO
                 SET nombre = @Nombre,
                     telefono = @Telefono
-                    ,password_hash = @PasswordHash
                 WHERE id_usuario = @Id
                 """, new
             {
                 req.Nombre,
                 req.Telefono,
-                PasswordHash = HashPassword(tempPassword),
                 Id = byEmail.IdCliente
             });
 
@@ -186,9 +189,9 @@ public class ClienteService : IClienteService
                 ?? throw new InvalidOperationException("No se pudo recuperar el cliente actualizado.");
 
             var dto = ToDto(updatedByEmail);
-            dto.CuentaCreada = true;
-            dto.PasswordTemporal = tempPassword;
-            dto.PasswordTemporal = (await EnsureLinkedLaravelUserAsync(conn, updatedByEmail, dto.PasswordTemporal)).PasswordTemporal;
+            var linked = await EnsureLinkedLaravelUserAsync(conn, updatedByEmail);
+            dto.CuentaCreada = linked.Created;
+            dto.PasswordTemporal = linked.PasswordTemporal;
             return dto;
         }
 
@@ -209,21 +212,17 @@ public class ClienteService : IClienteService
         if (byPhone == null)
             return await CrearAsync(req);
 
-        var byPhoneTempPassword = GenerateTemporaryPassword();
-
         await conn.ExecuteAsync("""
             UPDATE USUARIO
             SET nombre = @Nombre,
                 email = @Email,
-                telefono = @Telefono,
-                password_hash = COALESCE(@PasswordHash, password_hash)
+                telefono = @Telefono
             WHERE id_usuario = @Id
             """, new
         {
             req.Nombre,
             req.Email,
             req.Telefono,
-            PasswordHash = byPhoneTempPassword != null ? HashPassword(byPhoneTempPassword) : null,
             Id = byPhone.IdCliente
         });
 
@@ -242,9 +241,9 @@ public class ClienteService : IClienteService
             ?? throw new InvalidOperationException("No se pudo recuperar el cliente actualizado.");
 
         var updatedDto = ToDto(actualizado);
-        updatedDto.CuentaCreada = true;
-        updatedDto.PasswordTemporal = byPhoneTempPassword;
-        updatedDto.PasswordTemporal = (await EnsureLinkedLaravelUserAsync(conn, actualizado, updatedDto.PasswordTemporal)).PasswordTemporal;
+        var linkedByPhone = await EnsureLinkedLaravelUserAsync(conn, actualizado);
+        updatedDto.CuentaCreada = linkedByPhone.Created;
+        updatedDto.PasswordTemporal = linkedByPhone.PasswordTemporal;
         return updatedDto;
     }
 
@@ -351,28 +350,14 @@ public class ClienteService : IClienteService
 
         if (exists > 0)
         {
-            if (!string.IsNullOrWhiteSpace(knownPlainPassword))
-            {
-                var bcryptKnown = HashPasswordBcrypt(knownPlainPassword);
-                await conn.ExecuteAsync("""
-                    UPDATE users
-                    SET name = @Name, password = @Password,
-                        email_verified_at = COALESCE(email_verified_at, UTC_TIMESTAMP()),
-                        updated_at = UTC_TIMESTAMP()
-                    WHERE email = @Email
-                    """, new { Name = cliente.Nombre, Password = bcryptKnown, Email = cliente.Email });
-            }
-            else
-            {
-                await conn.ExecuteAsync("""
-                    UPDATE users
-                    SET name = @Name,
-                        email_verified_at = COALESCE(email_verified_at, UTC_TIMESTAMP()),
-                        updated_at = UTC_TIMESTAMP()
-                    WHERE email = @Email
-                    """, new { Name = cliente.Nombre, Email = cliente.Email });
-            }
-            return (false, knownPlainPassword);
+            await conn.ExecuteAsync("""
+                UPDATE users
+                SET name = @Name,
+                    email_verified_at = COALESCE(email_verified_at, UTC_TIMESTAMP()),
+                    updated_at = UTC_TIMESTAMP()
+                WHERE email = @Email
+                """, new { Name = cliente.Nombre, Email = cliente.Email });
+            return (false, null);
         }
 
         var plainPassword = knownPlainPassword ?? GenerateTemporaryPassword();
