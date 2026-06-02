@@ -126,7 +126,7 @@ public class ApiService
             var employee = _session.GetEmployee();
             var body = JsonSerializer.Serialize(new
             {
-                id_evento = model.EventoId,
+                id_usuario = model.ClienteId,
                 id_staff = employee?.IdStaff,
                 asientos = model.AsientosSeleccionados,
                 cliente = new
@@ -138,7 +138,7 @@ public class ApiService
                 }
             });
             var content = new StringContent(body, Encoding.UTF8, "application/json");
-            var response = await client.PostAsync("/api/ventas", content);
+            var response = await client.PostAsync("/api/sales", content);
             var json = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
@@ -162,7 +162,7 @@ public class ApiService
         try
         {
             var client = CreateAuthorizedClient();
-            var response = await client.GetAsync($"/api/ventas/{id}");
+            var response = await client.GetAsync($"/api/sales/{id}");
             var json = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
