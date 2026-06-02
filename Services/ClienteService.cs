@@ -330,6 +330,11 @@ public class ClienteService : IClienteService
         return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 
+    // PHP 8+ password_get_info() only recognizes $2y$ as bcrypt, not $2a$.
+    // BCrypt.Net defaults to $2a$, so we swap the prefix after hashing.
+    private static string HashPasswordBcrypt(string password) =>
+        BCrypt.Net.BCrypt.HashPassword(password).Replace("$2a$", "$2y$");
+
     private async Task<(bool Created, string? PasswordTemporal)> EnsureLinkedLaravelUserAsync(
         System.Data.IDbConnection conn,
         Cliente cliente,
@@ -348,7 +353,7 @@ public class ClienteService : IClienteService
         {
             if (!string.IsNullOrWhiteSpace(knownPlainPassword))
             {
-                var bcryptKnown = BCrypt.Net.BCrypt.HashPassword(knownPlainPassword);
+                var bcryptKnown = HashPasswordBcrypt(knownPlainPassword);
                 await conn.ExecuteAsync("""
                     UPDATE users
                     SET name = @Name, password = @Password,
@@ -371,7 +376,7 @@ public class ClienteService : IClienteService
         }
 
         var plainPassword = knownPlainPassword ?? GenerateTemporaryPassword();
-        var bcrypt = BCrypt.Net.BCrypt.HashPassword(plainPassword);
+        var bcrypt = HashPasswordBcrypt(plainPassword);
 
         await conn.ExecuteAsync("""
             INSERT INTO users (name, email, password, email_verified_at, created_at, updated_at)
