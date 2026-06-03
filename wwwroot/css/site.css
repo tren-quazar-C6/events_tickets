@@ -176,12 +176,12 @@ body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--
 .dashboard-events-table {
   table-layout: fixed;
 }
-.dashboard-events-table .col-evento { width: 42%; }
+.dashboard-events-table .col-evento { width: 38%; }
 .dashboard-events-table .col-tipo { width: 14%; }
 .dashboard-events-table .col-fecha { width: 13%; }
 .dashboard-events-table .col-precio { width: 12%; }
 .dashboard-events-table .col-disponibles { width: 10%; }
-.dashboard-events-table .col-accion { width: 9%; }
+.dashboard-events-table .col-accion { width: 13%; }
 .data-table th {
   text-align: left;
   padding: 10px 16px;
@@ -207,7 +207,13 @@ body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--
   overflow: hidden;
 }
 .dashboard-events-table td:last-child {
+  text-align: center;
   white-space: nowrap;
+}
+.dashboard-events-table td:last-child .btn {
+  max-width: 100%;
+  white-space: normal;
+  justify-content: center;
 }
 .data-table tr:last-child td { border-bottom: none; }
 .data-table tr:hover td { background: #fafafa; }
